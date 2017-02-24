@@ -24,132 +24,173 @@
  * 	Cryptoapi (Linux Crypto API framework) specific nss cfi header file
  */
 
-#define NSS_CRYPTOAPI_MAX_DATA_LEN	((uint16_t) -1)
-#define nss_cryptoapi_sg_has_frags(s)	sg_next(s)
-
-#define NSS_CRYPTOAPI_DEBUGFS_NAME_SZ	64
-#define NSS_CRYPTOAPI_MAGIC		0x7FED
+#define NSS_CRYPTOAPI_DEBUGFS_MAX_NAME 64
+#define NSS_CRYPTOAPI_DEBUGFS_MAX_CTX_ENTRY 5
+#define NSS_CRYPTOAPI_DEBUGFS_MAX_STATS_ENTRY 6
+#define NSS_CRYPTOAPI_MAGIC 0x7FED
+#define NSS_CRYPTOAPI_HDR_POOL_SZ 1024
+#define NSS_CRYPTOAPI_DEFAULT_HDR_SZ 512
+#define NSS_CRYPTOAPI_TIMEOUT 10 /* seconds */
+#define NSS_CRYPTOAPI_MAX_IV AES_BLOCK_SIZE/sizeof(uint32_t)
 
 /*
- * Key lengths for supported algorithms
+ * Cipher mode
  */
-enum nss_cryptoapi_keylen {
-	NSS_CRYPTOAPI_KEYLEN_AES128 = 16,
-	NSS_CRYPTOAPI_KEYLEN_AES256 = 32,
-	NSS_CRYPTOAPI_KEYLEN_AES192 = 24,
-	NSS_CRYPTOAPI_KEYLEN_3DES = 24,
-};
-
-enum nss_cryptoapi_fallback_type {
-	NSS_CRYPTOAPI_ENCRYPT,
-	NSS_CRYPTOAPI_DECRYPT,
+enum nss_cryptoapi_cipher_mode {
+	NSS_CRYPTOAPI_CIPHER_MODE_NONE = 0,	/* NULL cipher mode */
+	NSS_CRYPTOAPI_CIPHER_MODE_ECB,		/* Electronic Code Block */
+	NSS_CRYPTOAPI_CIPHER_MODE_CBC,		/* Cipher Block Chaining */
+	NSS_CRYPTOAPI_CIPHER_MODE_CTR,		/* Counter Mode */
+	NSS_CRYPTOAPI_CIPHER_MODE_GCM,		/* Galois Counter Mode */
+	NSS_CRYPTOAPI_CIPHER_MODE_MAX
 };
 
 /*
- * Cryptoapi sg virtual addresses used during Encryption/Decryption operations
+ * Authentication mode
  */
-struct nss_cryptoapi_addr {
-	uint8_t *src;
-	uint8_t *dst;
-	uint8_t *iv;
-	uint8_t *start;
+enum nss_cryptoapi_auth_mode {
+	NSS_CRYPTOAPI_AUTH_MODE_NONE = 0,	/* NULL Authentication */
+	NSS_CRYPTOAPI_AUTH_MODE_HASH,		/* Hash message digest */
+	NSS_CRYPTOAPI_AUTH_MODE_HMAC,		/* Keyed Hash message digest */
+	NSS_CRYPTOAPI_AUTH_MODE_GMAC,		/* Keyed Galois message digest */
+	NSS_CRYPTOAPI_AUTH_MODE_MAX
 };
 
 /*
- * Framework specific handle this will be used to communicate framework
- * specific data to Core specific data
+ * CryptoAPI software context
  */
 struct nss_cryptoapi {
-	nss_crypto_handle_t crypto;		/* crypto handle */
-	struct dentry *root_dentry;
-	struct dentry *stats_dentry;
+	struct nss_crypto_user_ctx ctx;			/* Crypto user context */
+	struct nss_crypto_user *user;			/* Crypto user handle */
+	struct dentry *root;				/* Root debugfs entry */
+	struct nss_cryptoapi_algo_info *algo_info;	/* algorithm table */
 };
 
+/*
+ * CryptoAPI statistics
+ */
+struct nss_cryptoapi_stats {
+	uint64_t queued;				/* Packets queued for completion */
+	uint64_t completed;				/* Packet completed */
+	uint64_t failed_queue;				/* Packets failing enqueue */
+	uint64_t failed_nomem;				/* Packets failing due to no memory */
+	uint64_t failed_req;				/* Packets failing due incorrect request */
+	uint64_t failed_align;				/* Packets failing alignment checks */
+	uint64_t error[NSS_CRYPTO_RESP_ERROR_MAX];	/* Other packet response errors */
+};
+
+/*
+ * CryptoAPI context
+ */
 struct nss_cryptoapi_ctx {
-	uint64_t queued;
-	uint64_t completed;
-	uint64_t queue_failed;
-	struct dentry *session_dentry;
-	struct crypto_tfm *sw_tfm;
-	uint32_t sid;
-	atomic_t refcnt;
-	uint16_t authsize;
-	uint16_t magic;
-	uint32_t ctx_iv[AES_BLOCK_SIZE/sizeof(uint32_t)];
-	bool fallback_req;
-	enum nss_crypto_cipher cip_alg;
-	enum nss_crypto_auth auth_alg;
-	enum nss_crypto_req_type op;
+	struct nss_cryptoapi_stats stats;	/* Statistics */
+	struct nss_cryptoapi_algo_info *info;	/* Algorithm info */
+	struct dentry *dentry;			/* Debugfs entry */
+	struct nss_crypto_user *user;		/* Crypto user */
+	struct crypto_tfm *sw_tfm;		/* SW fallback context */
+
+	uint32_t sid;				/* Session index */
+	uint32_t ctx_iv[NSS_CRYPTOAPI_MAX_IV];	/* Initial IV for the context */
+
+	uint16_t authsize;			/* HMAC length */
+	uint16_t magic;				/* Magic */
+	bool fallback_req;			/* SW fallback required for algorithm */
 };
 
+/*
+ * NSS Crypto specific structure to store the details of supported algorithms
+ */
+struct nss_cryptoapi_algo_info {
+	const char *cra_name;				/* CryptoAPI name */
+	uint16_t cipher_keylen;				/* Cipher key length */
+	uint16_t auth_keylen;				/* Authentication key length */
+	enum nss_crypto_cmn_algo algo;			/* NSS crypto algorithm ID */
+	enum nss_cryptoapi_cipher_mode cipher_mode;	/* Cipher mode */
+	enum nss_cryptoapi_auth_mode auth_mode;		/* Authentication mode */
+};
+
+/*
+ * Request specific structure
+ */
+struct nss_cryptoapi_info {
+	nss_crypto_req_callback_t cb;		/* Callback function */
+	struct scatterlist *first_sg;		/* First SG in the list */
+	struct scatterlist *last_sg;		/* Last SG in the list */
+	size_t nsegs;				/* No. of segments in the list */
+	void *iv;				/* IV to use for transform */
+	uint16_t skip;				/* Cipher skip */
+	uint16_t iv_size;			/* IV size */
+	uint16_t hmac_len;			/* HMAC length */
+	enum nss_crypto_op_dir op_dir;		/* Operation direction */
+};
+
+#if defined NSS_CFI_DEBUG
+
+/*
+ * nss_cryptoapi_verify_magic()
+ * 	verify magic
+ */
 static inline void nss_cryptoapi_verify_magic(struct nss_cryptoapi_ctx *ctx)
 {
 	BUG_ON(unlikely(ctx->magic != NSS_CRYPTOAPI_MAGIC));
 }
 
+/*
+ * nss_cryptoapi_set_magic()
+ * 	set magic
+ */
 static inline void nss_cryptoapi_set_magic(struct nss_cryptoapi_ctx *ctx)
 {
 	ctx->magic = NSS_CRYPTOAPI_MAGIC;
 }
 
+/*
+ * nss_cryptoapi_clear_magic()
+ * 	clear magic
+ */
 static inline void nss_cryptoapi_clear_magic(struct nss_cryptoapi_ctx *ctx)
 {
 	ctx->magic = 0;
 }
 
-static inline bool nss_cryptoapi_is_decrypt(struct nss_cryptoapi_ctx *ctx)
-{
-	return ctx->op & NSS_CRYPTO_REQ_TYPE_DECRYPT;
-}
+#define NSS_CRYPTOAPI_VERIFY_MAGIC(ctx) nss_cryptoapi_verify_magic(ctx)
+#define NSS_CRYPTOAPI_SET_MAGIC(ctx) nss_cryptoapi_set_magic(ctx)
+#define NSS_CRYPTOAPI_CLEAR_MAGIC(ctx) nss_cryptoapi_clear_magic(ctx)
+#else
+#define NSS_CRYPTOAPI_VERIFY_MAGIC(ctx)
+#define NSS_CRYPTOAPI_SET_MAGIC(ctx)
+#define NSS_CRYPTOAPI_CLEAR_MAGIC(ctx)
+#endif /* !NSS_CFI_DEBUG */
 
-/*
- * nss_cryptoapi_check_unalign()
- * 	Cryptoapi verify if length is aligned to boundary.
- */
-static inline bool nss_cryptoapi_check_unalign(uint32_t len, uint32_t boundary)
-{
-	return !!(len & (boundary - 1));
-}
 
 /*
  * function prototypes
  */
+extern struct nss_cryptoapi g_cryptoapi;
+extern int nss_cryptoapi_status2error(struct nss_cryptoapi_ctx *ctx, uint8_t status);
+extern struct nss_cryptoapi_algo_info *nss_cryptoapi_cra_name2info(const char *cra_name, uint16_t keylen);
+extern int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_info *info, void *app_data);
+/*
+ * Debug fs
+ */
+extern void nss_cryptoapi_add_ctx2debugfs(struct nss_cryptoapi_ctx *ctx);
 
-/* Debug fs */
-void nss_cryptoapi_debugfs_add_stats(struct dentry *parent, struct nss_cryptoapi_ctx *session_ctx);
-void nss_cryptoapi_debugfs_add_session(struct nss_cryptoapi *gbl_ctx, struct nss_cryptoapi_ctx *session_ctx);
-void nss_cryptoapi_debugfs_del_session(struct nss_cryptoapi_ctx *session_ctx);
-void nss_cryptoapi_debugfs_init(struct nss_cryptoapi *gbl_ctx);
-void nss_cryptoapi_debugfs_exit(struct nss_cryptoapi *gbl_ctx);
+/*
+ * AEAD
+ */
+extern int nss_cryptoapi_aead_init(struct crypto_aead *aead);
+extern void nss_cryptoapi_aead_exit(struct crypto_aead *aead);
+extern int nss_cryptoapi_aead_setkey(struct crypto_aead *tfm, const u8 *key, unsigned int keylen);
+extern int nss_cryptoapi_aead_setauthsize(struct crypto_aead *authenc, unsigned int authsize);
+extern int nss_cryptoapi_aead_encrypt(struct aead_request *req);
+extern int nss_cryptoapi_aead_decrypt(struct aead_request *req);
 
-/* AEAD */
-int nss_cryptoapi_aead_init(struct crypto_aead *aead);
-void nss_cryptoapi_aead_exit(struct crypto_aead *aead);
-int nss_cryptoapi_aead_aes_setkey(struct crypto_aead *tfm, const u8 *key, unsigned int keylen);
-int nss_cryptoapi_sha1_3des_setkey(struct crypto_aead *tfm, const u8 *key, unsigned int keylen);
-int nss_cryptoapi_sha256_3des_setkey(struct crypto_aead *tfm, const u8 *key, unsigned int keylen);
-
-int nss_cryptoapi_aead_setauthsize(struct crypto_aead *authenc, unsigned int authsize);
-int nss_cryptoapi_aead_aes_encrypt(struct aead_request *req);
-int nss_cryptoapi_aead_aes_decrypt(struct aead_request *req);
-
-int nss_cryptoapi_sha1_3des_encrypt(struct aead_request *req);
-int nss_cryptoapi_sha1_3des_decrypt(struct aead_request *req);
-
-int nss_cryptoapi_sha256_3des_encrypt(struct aead_request *req);
-int nss_cryptoapi_sha256_3des_decrypt(struct aead_request *req);
-
-/* ABLKCIPHER */
-int nss_cryptoapi_ablkcipher_init(struct crypto_tfm *tfm);
-void nss_cryptoapi_ablkcipher_exit(struct crypto_tfm *tfm);
-int nss_cryptoapi_ablk_aes_setkey(struct crypto_ablkcipher *cipher, const u8 *key, unsigned int len);
-int nss_cryptoapi_3des_cbc_setkey(struct crypto_ablkcipher *cipher, const u8 *key, unsigned int len);
-
-int nss_cryptoapi_ablk_aes_encrypt(struct ablkcipher_request *req);
-int nss_cryptoapi_ablk_aes_decrypt(struct ablkcipher_request *req);
-
-int nss_cryptoapi_3des_cbc_encrypt(struct ablkcipher_request *req);
-int nss_cryptoapi_3des_cbc_decrypt(struct ablkcipher_request *req);
-
-#endif /* __NSS_CRYPTOAPI_H */
-
+/*
+ * ABLKCIPHER
+ */
+extern int nss_cryptoapi_ablkcipher_init(struct crypto_tfm *tfm);
+extern void nss_cryptoapi_ablkcipher_exit(struct crypto_tfm *tfm);
+extern int nss_cryptoapi_ablk_setkey(struct crypto_ablkcipher *cipher, const u8 *key, unsigned int len);
+extern int nss_cryptoapi_ablk_encrypt(struct ablkcipher_request *req);
+extern int nss_cryptoapi_ablk_decrypt(struct ablkcipher_request *req);
+#endif /* !__NSS_CRYPTOAPI_H */
