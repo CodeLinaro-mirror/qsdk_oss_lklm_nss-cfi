@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014, 2017, The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -26,9 +26,13 @@
  */
 
 #define NSS_CFI_DRV_NAME		"nss_cfi"
-#define NSS_CFI_OCF_SES_MASK		0xffffffff
+#define NSS_CFI_OCF_SES_MASK		0xffff
 #define NSS_CFI_OCF_SESSION(_sid)	((_sid) & NSS_CFI_OCF_SES_MASK)
 
+#define NSS_CFI_OCF_ALGO_SHIFT(algo)	(algo << 16)
+#define NSS_CFI_OCF_GET_ALGO(sid)	((sid >> 16) & 0xFFFF)
+
+#define NSS_CFI_OCF_BITS2BYTES(x) (x / 8) /**< Bits to Bytes */
 
 /**
  * @brief Algorithm types supported by CFI layer
@@ -36,6 +40,8 @@
 enum nss_cfi_ocf_algo_type {
 	NSS_CFI_OCF_ALGO_TYPE_IS_CIPHER = 1,	/**< Cipher algorithm */
 	NSS_CFI_OCF_ALGO_TYPE_IS_AUTH,  	/**< Authentication algorithm */
+	NSS_CFI_OCF_ALGO_TYPE_IS_CIPHER_AUTH,  	/**< AEAD algorithm */
+	NSS_CFI_OCF_ALGO_TYPE_IS_AUTH_CIPHER,  	/**< AEAD algorithm */
 };
 
 /**
@@ -45,7 +51,8 @@ enum nss_cfi_ocf_algo_type {
 struct nss_cfi_ocf {
 	softc_device_decl dev;			/**< OCF crypto device instance */
 	int32_t cid;				/**< crypto tag */
-	nss_crypto_handle_t crypto;		/**< crypto handle */
+	struct nss_crypto_user *crypto;		/**< crypto handle */
+	struct nss_crypto_user_ctx *user_ctx;	/**< OCF user context */
 
 	nss_cfi_data_trap_t encrypt_fn;		/**< IPsec encryption trap function, Encap direction */
 	nss_cfi_data_trap_t decrypt_fn;		/**< IPsec decryption trap function, Decap direction */
@@ -56,13 +63,13 @@ struct nss_cfi_ocf {
 /**
  * @brief Structure for storing Algorithm specific info
  */
-struct nss_cfi_ocf_algo {
-	uint32_t core_algo;			/**< ALGO provided by core */
+struct nss_cfi_ocf_algo_map {
+	uint32_t algo[2];			/**< ALGO provided by cfi */
 	uint32_t max_keylen;			/**< max keylen supported by algo */
 	uint32_t max_ivlen;			/**< max ivlen supported by algo */
 	uint32_t max_blklen;			/**< max blklen supported by algo */
 	uint32_t max_hashlen;			/**< max hashlen supported by algo */
-	enum nss_cfi_ocf_algo_type flag;	/**< IS_AUTH or IS_CIPHER algo */
+	bool supported;				/**< Determine whether algo is supported or not */
 };
 
 /**
