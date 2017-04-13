@@ -629,7 +629,6 @@ static int nss_cfi_ipsec_dev_event(struct notifier_block *this, unsigned long ev
 
 	switch (event) {
 	case NETDEV_UP:
-
 		index = nss_cfi_ipsec_get_index(hlos_dev->name);
 		if (index < 0) {
 			return NOTIFY_DONE;
@@ -642,33 +641,30 @@ static int nss_cfi_ipsec_dev_event(struct notifier_block *this, unsigned long ev
 		nss_cfi_info("IPsec interface being registered: %s\n", hlos_dev->name);
 
 		nss_dev = nss_ipsecmgr_tunnel_add(&ipsec_cb);
-		if (nss_dev == NULL) {
+		if (!nss_dev) {
 			nss_cfi_err("NSS IPsec tunnel dev allocation failed for %s\n", hlos_dev->name);
 			return NOTIFY_BAD;
 		}
 
+		nss_ipsecmgr_tunnel_update_callback(nss_dev, hlos_dev);
 		tunnel_map[index].nss_dev = nss_dev;
-
 		break;
 
         case NETDEV_UNREGISTER:
-
 		index = nss_cfi_ipsec_get_index(hlos_dev->name);
 		if (index < 0) {
 			return NOTIFY_DONE;
 		}
 
 		nss_dev = tunnel_map[index].nss_dev;
-		if (nss_dev == NULL) {
+		if (!nss_dev) {
 			return NOTIFY_DONE;
 		}
 
 		nss_cfi_info("IPsec interface being unregistered: %s\n", hlos_dev->name);
 
 		nss_ipsecmgr_tunnel_del(nss_dev);
-
 		tunnel_map[index].nss_dev = NULL;
-
 		break;
 
 	default:
