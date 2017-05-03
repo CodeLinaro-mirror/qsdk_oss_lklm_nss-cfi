@@ -62,6 +62,12 @@ enum nss_cfi_ipsec_rule_type {
 };
 
 /*
+ * Methods to fill up IPv4 and v6 SAs and tuples
+ */
+typedef void *(*nss_cfi_ipsec_fill_sa_method_t)(struct sk_buff *skb, struct nss_ipsecmgr_sa *sa, uint16_t iv_len);
+typedef void (*nss_cfi_ipsec_fill_tuple_method_t)(struct sk_buff *skb, struct nss_ipsecmgr_encap_flow *flow, void *inner_hdr);
+
+/*
  * This is used by KLIPS for communicate the device along with the
  * packet. We need this to derive the mapping of the incoming flow
  * to the IPsec tunnel
@@ -207,6 +213,133 @@ static inline void * nss_cfi_ipsec_get_next_hdr(struct iphdr *ip)
 }
 
 /*
+ * nss_cfi_ipsec_v6addr_ntoh()
+ * 	Convert the v6 address form network to host order.
+ */
+static inline void nss_cfi_ipsec_v6addr_ntoh(uint32_t *dst, uint32_t *src)
+{
+	dst[0] = ntohl(src[3]);
+	dst[1] = ntohl(src[2]);
+	dst[2] = ntohl(src[1]);
+	dst[3] = ntohl(src[0]);
+}
+
+/*
+ * nss_cfi_ipsec_fill_v4_tuple()
+ * 	Fill v4 tuple from skb.
+ */
+static void nss_cfi_ipsec_fill_v4_tuple(struct sk_buff *skb, struct nss_ipsecmgr_encap_flow *flow, void *inner_hdr)
+{
+	struct nss_ipsecmgr_encap_v4_tuple *v4_tuple;
+	struct iphdr *iph = (struct iphdr *)inner_hdr;
+
+	flow->type = NSS_IPSECMGR_FLOW_TYPE_V4_TUPLE;
+	v4_tuple = &flow->data.v4_tuple;
+
+	v4_tuple->src_ip = ntohl(iph->saddr);
+	v4_tuple->dst_ip = ntohl(iph->daddr);
+	v4_tuple->protocol = iph->protocol;
+}
+
+/*
+ * nss_cfi_ipsec_fill_v6_tuple()
+ * 	Fill v6 tuple from skb.
+ */
+static void nss_cfi_ipsec_fill_v6_tuple(struct sk_buff *skb, struct nss_ipsecmgr_encap_flow *flow, void *inner_hdr)
+{
+	struct ipv6hdr *iph6 = (struct ipv6hdr *)inner_hdr;
+	struct nss_ipsecmgr_encap_v6_tuple *v6_tuple;
+	struct frag_hdr *frag;
+
+	flow->type = NSS_IPSECMGR_FLOW_TYPE_V6_TUPLE;
+	v6_tuple = &flow->data.v6_tuple;
+
+	/*
+	 * At this point the next header can be Fragment or Plaintext. Blindly, assume
+	 * that it is Fragment and perform the test for next header in fragment
+	 */
+	frag = (struct frag_hdr *)((uint8_t *)iph6 + sizeof(*iph6));
+	v6_tuple->next_hdr = (iph6->nexthdr == NEXTHDR_FRAGMENT) ? frag->nexthdr : iph6->nexthdr;
+
+	nss_cfi_ipsec_v6addr_ntoh(v6_tuple->src_ip, iph6->saddr.s6_addr32);
+	nss_cfi_ipsec_v6addr_ntoh(v6_tuple->dst_ip, iph6->daddr.s6_addr32);
+}
+
+/*
+ * nss_cfi_ipsec_fill_v4_sa()
+ * 	Fill v4 SA from skb.
+ */
+static void *nss_cfi_ipsec_fill_v4_sa(struct sk_buff *skb, struct nss_ipsecmgr_sa *sa, uint16_t iv_len)
+{
+	struct nss_ipsecmgr_sa_v4 *sa_v4;
+	struct iphdr *iph;
+	struct ip_esp_hdr *esp;
+	struct udphdr *udp;
+
+	iph = ip_hdr(skb);
+	if ((iph->protocol != IPPROTO_ESP) && (iph->protocol != IPPROTO_UDP)) {
+		nss_cfi_err("Next header is neither ESP nor NAT-T\n");
+		return NULL;
+	}
+
+	/*
+	 * At this point the next header can be UDP or ESP. Blindly, assume
+	 * that it is UDP and perform the test for NAT-T port number
+	 */
+	udp = udp_hdr(skb);
+	esp = ip_esp_hdr(skb);
+
+	if ((iph->protocol == IPPROTO_UDP) && (udp->dest == NSS_IPSECMGR_NATT_PORT_DATA))
+		esp = (uint8_t *)udp + sizeof(*udp);
+
+	sa->type = NSS_IPSECMGR_SA_TYPE_V4;
+	sa_v4 = &sa->data.v4;
+
+	sa_v4->src_ip = ntohl(iph->saddr);
+	sa_v4->dst_ip = ntohl(iph->daddr);
+	sa_v4->ttl = iph->ttl;
+	sa_v4->spi_index = ntohl(esp->spi);
+
+	return (uint8_t *)esp + sizeof(*esp) + iv_len;
+}
+
+/*
+ * nss_cfi_ipsec_fill_v6_sa()
+ * 	Fill v6 SA from skb.
+ */
+static void *nss_cfi_ipsec_fill_v6_sa(struct sk_buff *skb, struct nss_ipsecmgr_sa *sa, uint16_t iv_len)
+{
+	struct nss_ipsecmgr_sa_v6 *sa_v6;
+	struct ip_esp_hdr *esp;
+	struct ipv6hdr *iph6;
+
+	/*
+	 * The outer header of IPv6 needs to always be an ESP packet. Reasons:
+	 * * decryption with fragment header; that's a voilation of RFC
+	 * * encryption with fragmentation as it will happen later during
+	 *   the final transmit where route lookup identifies the final DST
+	 */
+	iph6 = ipv6_hdr(skb);
+	if (iph6->nexthdr != IPPROTO_ESP) {
+		nss_cfi_err("Next header for encapsulated IPv6 is not ESP\n");
+		return NULL;
+	}
+
+	esp = ip_esp_hdr(skb);
+
+	sa->type = NSS_IPSECMGR_SA_TYPE_V6;
+	sa_v6 = &sa->data.v6;
+
+	nss_cfi_ipsec_v6addr_ntoh(sa_v6->src_ip, iph6->saddr.s6_addr32);
+	nss_cfi_ipsec_v6addr_ntoh(sa_v6->dst_ip, iph6->daddr.s6_addr32);
+
+	sa_v6->hop_limit = iph6->hop_limit;
+	sa_v6->spi_index = ntohl(esp->spi);
+
+	return (uint8_t *)esp + sizeof(*esp) + iv_len;
+}
+
+/*
  * nss_cfi_ipsec_free_session()
  * 	Free perticular session on NSS.
  */
@@ -245,17 +378,16 @@ static int32_t nss_cfi_ipsec_free_session(uint32_t crypto_sid)
 static int32_t nss_cfi_ipsec_trap_encap(struct sk_buff *skb, struct nss_cfi_crypto_info* crypto)
 {
 	struct nss_ipsecmgr_encap_flow encap_flow = {0};
-	struct nss_ipsecmgr_encap_v4_tuple *v4_tuple;
 	struct nss_ipsecmgr_sa_data data = {0};
 	struct nss_ipsecmgr_sa encap_sa = {0};
-	struct nss_ipsecmgr_sa_v4 *sa_v4;
-	struct ip_esp_hdr *esp = NULL;
+	nss_cfi_ipsec_fill_sa_method_t fill_sa_fn;
+	nss_cfi_ipsec_fill_tuple_method_t fill_tuple_fn;
 	struct net_device *hlos_dev;
 	struct net_device *nss_dev;
 	struct iphdr *outer_ip;
 	struct iphdr *inner_ip;
-	uint32_t index = 0;
-	uint32_t ivsize = 0;
+	uint32_t index;
+	uint16_t iv_len;
 
 	hlos_dev = nss_cfi_ipsec_get_dev(skb);
 	if (hlos_dev == NULL) {
@@ -263,48 +395,47 @@ static int32_t nss_cfi_ipsec_trap_encap(struct sk_buff *skb, struct nss_cfi_cryp
 		return -1;
 	}
 
-	ivsize = nss_cfi_ipsec_get_iv_len(crypto->cipher_algo);
-	if (ivsize < 0) {
+	/*
+	 * TODO: this needs to change to support AES-CTR acceleration
+	 */
+	iv_len = nss_cfi_ipsec_get_iv_len(crypto->cipher_algo);
+	if (iv_len < 0) {
 		nss_cfi_err("Invalid IV\n");
 		return -1;
 	}
 
-	outer_ip = (struct iphdr *)skb->data;
-	esp = (struct ip_esp_hdr *)(skb->data + sizeof(struct iphdr));
-	/* XXX: this should use the IV len fed by CFI */
-	inner_ip = (struct iphdr *)(skb->data + sizeof(struct iphdr) + sizeof(struct ip_esp_hdr) + ivsize);
-
-	if ((outer_ip->version != IPVERSION) || (outer_ip->ihl != 5)) {
-		nss_cfi_dbg("Outer non-IPv4 packet {0x%x, 0x%x}\n", outer_ip->version, outer_ip->ihl);
-		return 0;
-	}
-
-	if ((inner_ip->version != IPVERSION) || (inner_ip->ihl != 5)) {
-		nss_cfi_dbg("Inner non-IPv4 packet {0x%x, 0x%x}\n", inner_ip->version, inner_ip->ihl);
-		return -1;
-	}
-
-	skb->skb_iif = hlos_dev->ifindex;
-	encap_flow.type = NSS_IPSECMGR_FLOW_TYPE_V4_TUPLE;
-
-	/*
-	 * construct flow information
-	 */
-	v4_tuple = &encap_flow.data.v4_tuple;
-	v4_tuple->src_ip = ntohl(inner_ip->saddr);
-	v4_tuple->dst_ip = ntohl(inner_ip->daddr);
-	v4_tuple->protocol = inner_ip->protocol;
+	skb_reset_network_header(skb);
+	outer_ip = ip_hdr(skb);
 
 	/*
 	 * construct SA information
 	 */
-	encap_sa.type = NSS_IPSECMGR_SA_TYPE_V4;
-	sa_v4 = &encap_sa.data.v4;
+	switch (outer_ip->version) {
+	case IPVERSION:
+		skb_set_transport_header(skb, sizeof(struct iphdr));
+		fill_sa_fn = nss_cfi_ipsec_fill_v4_sa;
+		break;
+	case 6:
+		skb_set_transport_header(skb, sizeof(struct ipv6hdr));
+		fill_sa_fn = nss_cfi_ipsec_fill_v6_sa;
+		break;
+	default:
+		nss_cfi_warn("%p:invalid outer IP version (%d)\n", skb, outer_ip->version);
+		return -EINVAL;
+	}
 
-	sa_v4->src_ip = ntohl(outer_ip->saddr);
-	sa_v4->dst_ip = ntohl(outer_ip->daddr);
-	sa_v4->ttl = outer_ip->ttl;
-	sa_v4->spi_index = ntohl(esp->spi);
+	inner_ip = (struct iphdr *)fill_sa_fn(skb, &encap_sa, iv_len);
+	if (!inner_ip)
+		return -EINVAL;
+
+	skb->skb_iif = hlos_dev->ifindex;
+
+	/*
+	 * construct flow information
+	 */
+	fill_tuple_fn = (inner_ip->version == IPVERSION) ? nss_cfi_ipsec_fill_v4_tuple :
+							nss_cfi_ipsec_fill_v6_tuple;
+	fill_tuple_fn(skb, &encap_flow, inner_ip);
 
 	data.esp.icv_len = crypto->hash_len;
 	data.esp.nat_t_req = false;
@@ -316,14 +447,14 @@ static int32_t nss_cfi_ipsec_trap_encap(struct sk_buff *skb, struct nss_cfi_cryp
 
 	index = nss_cfi_ipsec_get_index(hlos_dev->name);
 	if (index < 0) {
-		return -1;
+		return -EINVAL;
 	}
 
 	nss_dev = tunnel_map[index].nss_dev;
 
 	if (nss_ipsecmgr_encap_add(nss_dev, &encap_flow, &encap_sa, &data) == false) {
 		nss_cfi_err("Error in Pushing the Encap Rule \n");
-		return -1;
+		return -EINVAL;
 	}
 
 	/*
@@ -348,14 +479,12 @@ static int32_t nss_cfi_ipsec_trap_decap(struct sk_buff *skb, struct nss_cfi_cryp
 {
 	struct nss_ipsecmgr_sa decap_sa = {0};
 	struct nss_ipsecmgr_sa_data data = {0};
-	struct nss_ipsecmgr_sa_v4 *sa_v4;
+	nss_cfi_ipsec_fill_sa_method_t fill_sa_fn;
 	struct iphdr *outer_ip;
-	struct iphdr *inner_ip;
-	struct ip_esp_hdr *esp = NULL;
 	struct net_device *hlos_dev;
 	struct net_device *nss_dev;
-	uint8_t index = 0;
-	uint32_t ivsize = 0;
+	uint8_t index;
+	uint16_t iv_len;
 
 	hlos_dev = nss_cfi_ipsec_get_dev(skb);
 	if (hlos_dev == NULL) {
@@ -363,35 +492,29 @@ static int32_t nss_cfi_ipsec_trap_decap(struct sk_buff *skb, struct nss_cfi_cryp
 		return -1;
 	}
 
-	ivsize = nss_cfi_ipsec_get_iv_len(crypto->cipher_algo);
-	if (ivsize < 0) {
+	iv_len = nss_cfi_ipsec_get_iv_len(crypto->cipher_algo);
+	if (iv_len < 0) {
 		nss_cfi_err("Invalid IV\n");
 		return -1;
 	}
 
 	skb->skb_iif = hlos_dev->ifindex;
-
-	outer_ip = (struct iphdr *)skb_network_header(skb);
-	esp = (struct ip_esp_hdr *)skb->data;
-	/* XXX: this should use the IV len fed by CFI */
-	inner_ip = (struct iphdr *)(skb->data + sizeof(struct ip_esp_hdr) + ivsize);
+	outer_ip = ip_hdr(skb);
 
 	/*
 	 * construct SA information
 	 */
-	decap_sa.type = NSS_IPSECMGR_SA_TYPE_V4;
-	sa_v4 = &decap_sa.data.v4;
-
-	sa_v4->src_ip = ntohl(outer_ip->saddr);
-	sa_v4->dst_ip = ntohl(outer_ip->daddr);
-	sa_v4->spi_index = ntohl(esp->spi);
+	fill_sa_fn = (outer_ip->version == IPVERSION) ? nss_cfi_ipsec_fill_v4_sa :
+							nss_cfi_ipsec_fill_v6_sa;
+	if (!fill_sa_fn(skb, &decap_sa, iv_len))
+		return -EINVAL;
 
 	data.crypto_index = crypto->sid;
 	data.esp.icv_len = crypto->hash_len;
 
 	index = nss_cfi_ipsec_get_index(hlos_dev->name);
 	if (index < 0) {
-		return -1;
+		return -EINVAL;
 	}
 
 	nss_dev = tunnel_map[index].nss_dev;
@@ -553,15 +676,8 @@ static void nss_cfi_ipsec_data_cb(void *cb_ctx, struct sk_buff *skb)
 		sa.type = NSS_IPSECMGR_SA_TYPE_V6;
 		sa_v6 = &sa.data.v6;
 
-		sa_v6->src_ip[0] = ntohl(ip6->saddr.s6_addr32[0]);
-		sa_v6->src_ip[1] = ntohl(ip6->saddr.s6_addr32[1]);
-		sa_v6->src_ip[2] = ntohl(ip6->saddr.s6_addr32[2]);
-		sa_v6->src_ip[3] = ntohl(ip6->saddr.s6_addr32[3]);
-
-		sa_v6->dst_ip[0] = ntohl(ip6->daddr.s6_addr32[0]);
-		sa_v6->dst_ip[1] = ntohl(ip6->daddr.s6_addr32[1]);
-		sa_v6->dst_ip[2] = ntohl(ip6->daddr.s6_addr32[2]);
-		sa_v6->dst_ip[3] = ntohl(ip6->daddr.s6_addr32[3]);
+		nss_cfi_ipsec_v6addr_ntoh(sa_v6->src_ip, ip6->saddr.s6_addr32);
+		nss_cfi_ipsec_v6addr_ntoh(sa_v6->dst_ip, ip6->daddr.s6_addr32);
 		sa_v6->spi_index = ntohl(esp->spi);
 
 		sa_v6->hop_limit = ip6->hop_limit;
