@@ -35,6 +35,8 @@
 #include <linux/list.h>
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
+#include <crypto/aes.h>
+#include <crypto/des.h>
 
 #include <net/netfilter/nf_conntrack.h>
 #include <net/netfilter/nf_conntrack_tuple.h>
@@ -45,7 +47,9 @@
 #include <net/esp.h>
 
 #include <nss_api_if.h>
+#if !defined(NSS_CFI_IPQ807X_SUPPORT)
 #include <nss_crypto_if.h>
+#endif
 #include <nss_ipsec.h>
 #include <nss_cfi_if.h>
 #include "nss_ipsecmgr.h"
@@ -113,37 +117,65 @@ const static uint8_t *max_tun_supp[] = {
 };
 #define NSS_CFI_IPSEC_MAX_TUN (sizeof(max_tun_supp) / sizeof(max_tun_supp[0]))
 
+/*
+ * TODO: this needs to fixed as the with v2.0 there is no
+ * statically defined NSS_CRYPTO_MAX_IDXS. It is mostly available
+ * through the DTSI. There are several ways to solve this one option
+ * would be to get this information from the driver using an API.
+ */
 struct nss_cfi_ipsec_tunnel tunnel_map[NSS_CFI_IPSEC_MAX_TUN];	/* per tunnel device table */
 struct nss_cfi_ipsec_sa sa_tbl[NSS_CRYPTO_MAX_IDXS];		/* per crypto session table */
 
 /*
  * nss_cfi_ipsec_get_iv_len
- * 	get ipsec algorithm specific iv len
+ *	get ipsec algorithm specific iv len
+ *
+ * Note: This api to get iv len, input argument is different
+ * for new crypto framework.
  */
+#if defined(NSS_CFI_IPQ807X_SUPPORT)
+static int32_t nss_cfi_ipsec_get_iv_len(enum nss_crypto_cmn_algo algo)
+{
+	switch (algo) {
+	case NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA1_HMAC:
+	case NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA1_HMAC:
+		return AES_BLOCK_SIZE;
+
+	case NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA1_HMAC:
+		return DES_BLOCK_SIZE;
+
+	case NSS_CRYPTO_CMN_ALGO_NULL:
+		return 0;
+
+	default:
+		nss_cfi_err("Invalid algorithm\n");
+		return -1;
+	}
+}
+
+#else
+
 static int32_t nss_cfi_ipsec_get_iv_len(uint32_t algo)
 {
-	uint32_t result = -1;
+	int result = -1;
 
 	switch (algo) {
 	case NSS_CRYPTO_CIPHER_AES_CBC:
 	case NSS_CRYPTO_CIPHER_AES_CTR:
-		result = NSS_CRYPTO_MAX_IVLEN_AES;
-		break;
+		return NSS_CRYPTO_MAX_IVLEN_AES;
 
 	case NSS_CRYPTO_CIPHER_DES:
-		result = NSS_CRYPTO_MAX_IVLEN_DES;
-		break;
+		return NSS_CRYPTO_MAX_IVLEN_DES;
 
 	case NSS_CRYPTO_CIPHER_NULL:
-		result = NSS_CRYPTO_MAX_IVLEN_NULL;
-		break;
+		return NSS_CRYPTO_MAX_IVLEN_NULL;
 
 	default:
 		nss_cfi_err("Invalid algorithm\n");
-		break;
+		return -1;
 	}
-	return result;
 }
+#endif
 
 /*
  * nss_cfi_ipsec_get_dev()
@@ -347,11 +379,11 @@ static int32_t nss_cfi_ipsec_free_session(uint32_t crypto_sid)
 {
 	struct nss_cfi_ipsec_sa *sa;
 
-	if (crypto_sid >= NSS_CRYPTO_MAX_IDXS) {
+	if (crypto_sid >= NSS_CRYPTO_MAX_IDXS)
 		return -1;
-	}
 
 	sa = &sa_tbl[crypto_sid];
+
 	/*
 	 * check whether crypto index correspond to encap/decap and
 	 * send message to ipsecmgr to delete the session
@@ -395,10 +427,12 @@ static int32_t nss_cfi_ipsec_trap_encap(struct sk_buff *skb, struct nss_cfi_cryp
 		return -1;
 	}
 
-	/*
-	 * TODO: this needs to change to support AES-CTR acceleration
-	 */
+#if defined(NSS_CFI_IPQ807X_SUPPORT)
+	iv_len = nss_cfi_ipsec_get_iv_len(crypto->algo);
+#else
 	iv_len = nss_cfi_ipsec_get_iv_len(crypto->cipher_algo);
+#endif
+
 	if (iv_len < 0) {
 		nss_cfi_err("Invalid IV\n");
 		return -1;
@@ -492,7 +526,12 @@ static int32_t nss_cfi_ipsec_trap_decap(struct sk_buff *skb, struct nss_cfi_cryp
 		return -1;
 	}
 
+#if defined(NSS_CFI_IPQ807X_SUPPORT)
+	iv_len = nss_cfi_ipsec_get_iv_len(crypto->algo);
+#else
 	iv_len = nss_cfi_ipsec_get_iv_len(crypto->cipher_algo);
+#endif
+
 	if (iv_len < 0) {
 		nss_cfi_err("Invalid IV\n");
 		return -1;

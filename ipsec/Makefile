@@ -10,3 +10,7 @@ ccflags-y += -I$(obj)/../include
 ccflags-y += -I$(obj)/
 ccflags-y += -DNSS_CFI_DEBUG_LEVEL=3
 ccflags-y += -DNSS_CFI_BUILD_ID="$(BUILD_ID)"
+
+ifneq (, $(findstring ipq807x, $(SoC)))
+ccflags-y += -DNSS_CFI_IPQ807X_SUPPORT
+endif
