@@ -636,8 +636,6 @@ void nss_cfi_ocf_register(void *app_data, struct nss_crypto_user *user)
 {
 	struct nss_cfi_ocf *sc = &g_cfi_ocf;
 
-	sc->crypto = user;
-
 	/* register algorithms with the framework */
 	crypto_register(sc->cid, CRYPTO_AES_CBC, 0, 0);
 	crypto_register(sc->cid, CRYPTO_3DES_CBC, 0, 0);
@@ -708,7 +706,7 @@ int nss_cfi_ocf_init(void)
 		return -1;
 	}
 
-	user_ctx = kzalloc(sizeof(struct nss_crypto_user_ctx), GFP_KERNEL);
+	user_ctx = vzalloc(sizeof(struct nss_crypto_user_ctx));
 	if (!user_ctx) {
 		return -ENOMEM;
 	}
@@ -726,7 +724,12 @@ int nss_cfi_ocf_init(void)
 	decrypt = xchg(&sc->decrypt_fn, nss_cfi_ocf_decrypt_trap);
 	session = xchg(&sc->session_fn, nss_cfi_ocf_session_trap);
 
-	nss_crypto_register_user(user_ctx, "nss_cfi_ocf");
+	sc->crypto = nss_crypto_register_user(user_ctx, "nss_cfi_ocf");
+	if (!sc->crypto) {
+		nss_cfi_err("Failed to register NSS CRYPTOAPI driver\n");
+		vfree(user_ctx);
+		return -ENODEV;
+	}
 
 	return 0;
 }
@@ -738,7 +741,9 @@ void nss_cfi_ocf_exit(void)
 {
 	struct nss_cfi_ocf *sc = &g_cfi_ocf;
 
-	nss_crypto_unregister_user(sc->user_ctx);
+	if (sc->crypto)
+		nss_crypto_unregister_user(sc->crypto);
+
 	nss_cfi_info("exiting nss_cfi_ocf\n");
 	kfree(sc->user_ctx);
 	crypto_unregister_all(g_cfi_ocf.cid);
