@@ -7,6 +7,7 @@ $(NSS_CRYPTOAPI_MOD_NAME)-objs = nss_cryptoapi.o
 $(NSS_CRYPTOAPI_MOD_NAME)-objs += nss_cryptoapi_aead.o
 $(NSS_CRYPTOAPI_MOD_NAME)-objs += nss_cryptoapi_debugfs.o
 $(NSS_CRYPTOAPI_MOD_NAME)-objs += nss_cryptoapi_ablk.o
+$(NSS_CRYPTOAPI_MOD_NAME)-objs += nss_cryptoapi_ahash.o
 
 obj ?= .
 

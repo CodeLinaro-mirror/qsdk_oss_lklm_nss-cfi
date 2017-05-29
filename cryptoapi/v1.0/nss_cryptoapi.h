@@ -24,7 +24,7 @@
 
 /**
  * nss_cryptoapi.h
- * 	Cryptoapi (Linux Crypto API framework) specific nss cfi header file
+ *	Cryptoapi (Linux Crypto API framework) specific nss cfi header file
  */
 
 /*
@@ -65,6 +65,19 @@ struct nss_cryptoapi_ctx {
 	uint16_t rsvd;
 	struct crypto_tfm *sw_tfm;
 	bool fallback_req;
+};
+
+/**
+ * @brief Ahash algorithm req specific context
+ *	used during ahash transform request
+ *	is_used:  req is in the middle of transformation
+ *	diglen: indicate the hash result size
+ *	digest: Used to store the hash result for .update.
+ */
+struct nss_cryptoapi_req_ctx {
+	bool is_used;
+	uint32_t diglen;
+	uint8_t digest[SHA1_DIGEST_SIZE];
 };
 
 /**
@@ -170,6 +183,22 @@ int nss_cryptoapi_ablk_aes_decrypt(struct ablkcipher_request *req);
 
 int nss_cryptoapi_3des_cbc_encrypt(struct ablkcipher_request *req);
 int nss_cryptoapi_3des_cbc_decrypt(struct ablkcipher_request *req);
+
+/* ahash */
+int nss_cryptoapi_ahash_cra_init(struct crypto_tfm *tfm);
+void nss_cryptoapi_ahash_cra_exit(struct crypto_tfm *tfm);
+
+int nss_cryptoapi_sha1_hmac_setkey(struct crypto_ahash *ahash,
+	const u8 *key, unsigned int keylen);
+
+int nss_cryptoapi_sha1_hmac_init(struct ahash_request *req);
+int nss_cryptoapi_sha1_hmac_update(struct ahash_request *req);
+int nss_cryptoapi_sha1_hmac_final(struct ahash_request *req);
+
+int nss_cryptoapi_sha1_hmac_digest(struct ahash_request *req);
+
+int nss_cryptoapi_sha1_hmac_export(struct ahash_request *req, void *out);
+int nss_cryptoapi_sha1_hmac_import(struct ahash_request *req, const void *in);
 
 #endif /* __NSS_CRYPTOAPI_H */
 

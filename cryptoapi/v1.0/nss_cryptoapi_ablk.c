@@ -423,7 +423,7 @@ struct nss_crypto_buf *nss_cryptoapi_ablk_transform(struct ablkcipher_request *r
 
 	nss_cfi_dbg("cipher_len: %d, iv_len: %d, auth_len: %d"
 			"cipher_skip: %d, auth_skip: %d\n",
-			buf->cipher_len, ivsize, buf->auth_len,
+			buf->cipher_len, iv_size, buf->auth_len,
 			info->params->cipher_skip, info->params->auth_skip);
 	nss_cfi_dbg("before transformation\n");
 	nss_cfi_dbg_data(sg_virt(req->src), cipher_len, ' ');
