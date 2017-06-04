@@ -50,6 +50,7 @@
 #include <nss_cfi_ocf.h>
 
 #define NSS_CRYPTO_BUF_TAILROOM 128
+#define ESP_HDR_LEN 8
 
 static struct nss_cfi_ocf g_cfi_ocf = {{{0}}};
 
@@ -457,13 +458,14 @@ static int nss_cfi_ocf_process(device_t dev, struct cryptop *crp, int hint)
 	struct cryptodesc *crd = NULL;
 	struct sk_buff *skb;
 	uint32_t len, sid;
-	int ivsize, tot_len, algo;
+	int ivsize, algo;
 	uint16_t cipher_len = 0;
 	uint16_t auth_len = 0;
 	uint32_t hash_len = 0;
 	bool encrypt = false;
 	bool decrypt = false;
 	bool auth = false;
+	int esp_offset = 0;
 
 	nss_cfi_assert(crp);
 	nss_cfi_assert(sc);
@@ -519,7 +521,7 @@ static int nss_cfi_ocf_process(device_t dev, struct cryptop *crp, int hint)
 	/*
 	 *  Allocate nss_crypto_buffer
 	 */
-	ch = nss_crypto_hdr_alloc(sc->crypto, crp->crp_sid, 1, ivsize);
+	ch = nss_crypto_hdr_alloc(sc->crypto, sid, 1, ivsize);
 	if (!ch) {
 		nss_cfi_dbg("%p: not able to allocate crypto buffer\n");
 		goto crypto_done;
@@ -545,8 +547,8 @@ static int nss_cfi_ocf_process(device_t dev, struct cryptop *crp, int hint)
 		memcpy(iv_addr, skb->data + cip_crd->crd_inject, ivsize);
 
 
-		nss_cfi_dbg("cipher len %d cipher skip %d  cip_crd->crd_inject=%d iv_addr %p\n",
-				cipher_len, cip_crd->crd_skip, cip_crd->crd_inject, iv_addr);
+		nss_cfi_dbg("encrypt=%d\t decrypt=%d\t cipher len %d cipher skip %d  cip_crd->crd_inject=%d iv_addr %p\n",
+				encrypt, decrypt, cipher_len, cip_crd->crd_skip, cip_crd->crd_inject, iv_addr);
 	}
 
 	if (auth_crd) {
@@ -560,8 +562,10 @@ static int nss_cfi_ocf_process(device_t dev, struct cryptop *crp, int hint)
 
 	nss_crypto_hdr_set_hmac_len(ch, hash_len);
 
+	esp_offset = skb->len - (hash_len + cipher_len + ivsize + ESP_HDR_LEN);
+
 	if (encrypt && auth) {
-		nss_crypto_hdr_set_skip(ch, cip_crd->crd_skip - 20);
+		nss_crypto_hdr_set_skip(ch, cip_crd->crd_skip - esp_offset);
 		nss_crypto_hdr_set_op(ch, NSS_CRYPTO_OP_DIR_ENC_AUTH);
 	} else if (decrypt && auth) {
 		nss_crypto_hdr_set_skip(ch, cip_crd->crd_skip);
@@ -582,14 +586,14 @@ static int nss_cfi_ocf_process(device_t dev, struct cryptop *crp, int hint)
 	 */
 	if (encrypt) {
 		len = skb->len;
-		skb->data += 20;
-		skb->len -= (hash_len + 20);
+		skb->data += esp_offset;
+		skb->len -= (hash_len + esp_offset);
 	}
 
 	nss_crypto_hdr_map_skb(ch, skb);
 
 	if (encrypt) {
-		skb->data -= 20;
+		skb->data -= esp_offset;
 		skb->len = len;
 	}
 
@@ -599,9 +603,6 @@ static int nss_cfi_ocf_process(device_t dev, struct cryptop *crp, int hint)
 	if ((cip_crd->crd_flags & CRD_F_ENCRYPT) && (crp->crp_flags & CRYPTO_F_SKBUF)) {
 		sc->encrypt_fn((struct sk_buff *)crp->crp_buf, &gbl_crypto_info[ch->index]);
 	}
-
-	tot_len = ch->data_len + ivsize + ch->hmac_len + ch->buf_len;
-	nss_crypto_hdr_set_tot_len(ch, tot_len);
 
 	/*
 	 *  Send the buffer to CORE layer for processing

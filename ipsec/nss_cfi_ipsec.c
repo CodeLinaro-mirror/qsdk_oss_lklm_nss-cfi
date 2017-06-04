@@ -56,6 +56,7 @@
 
 #define NSS_CFI_IPSEC_BASE_NAME "ipsec"
 #define NSS_CFI_IPSEC_TUN_IFNAME(x) NSS_CFI_IPSEC_BASE_NAME#x
+#define NSS_CFI_IPSEC_SES_MASK 0xffff
 
 /* NSS IPsec rule type */
 enum nss_cfi_ipsec_rule_type {
@@ -377,12 +378,13 @@ static void *nss_cfi_ipsec_fill_v6_sa(struct sk_buff *skb, struct nss_ipsecmgr_s
  */
 static int32_t nss_cfi_ipsec_free_session(uint32_t crypto_sid)
 {
+	uint16_t idx = crypto_sid & NSS_CFI_IPSEC_SES_MASK;
 	struct nss_cfi_ipsec_sa *sa;
 
-	if (crypto_sid >= NSS_CRYPTO_MAX_IDXS)
+	if (idx >= NSS_CRYPTO_MAX_IDXS)
 		return -1;
 
-	sa = &sa_tbl[crypto_sid];
+	sa = &sa_tbl[idx];
 
 	/*
 	 * check whether crypto index correspond to encap/decap and
