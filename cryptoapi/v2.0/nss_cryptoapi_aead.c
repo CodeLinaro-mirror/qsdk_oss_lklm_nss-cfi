@@ -42,6 +42,7 @@
 #include <crypto/algapi.h>
 #include <crypto/aead.h>
 #include <crypto/authenc.h>
+#include <crypto/ctr.h>
 
 #include <nss_api_if.h>
 #include <nss_crypto_cmn.h>
@@ -151,6 +152,15 @@ int nss_cryptoapi_aead_setkey(struct crypto_aead *aead, const u8 *key, unsigned 
 		nss_cfi_err("%p: Unable to find algorithm with keylen\n", ctx);
 		crypto_aead_set_flags(aead, CRYPTO_TFM_RES_BAD_KEY_LEN);
 		return -ENOENT;
+	}
+
+	ctx->iv_size = crypto_aead_ivsize(aead);
+
+	if (ctx->info->cipher_mode == NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686) {
+		keys.enckeylen = keys.enckeylen - CTR_RFC3686_NONCE_SIZE;
+		memcpy(ctx->ctx_iv, keys.enckey + keys.enckeylen, CTR_RFC3686_NONCE_SIZE);
+		ctx->ctx_iv[3] = ntohl(0x1);
+		ctx->iv_size += CTR_RFC3686_NONCE_SIZE + sizeof(uint32_t);
 	}
 
 	/*
@@ -287,11 +297,17 @@ int nss_cryptoapi_aead_encrypt(struct aead_request *req)
 
 	/*
 	 * Fill the request information structure
+	 * Note: For CTR mode, IV size will be set to AES_BLOCK_SIZE.
+	 * This is because linux gives iv size as 8 while we need to
+	 * alloc 16 bytes in crypto hdr to accomodate:
+	 * - 4 bytes of nonce
+	 * - 8 bytes of IV
+	 * - 4 bytes of initial counter
 	 */
 	info.iv = req->iv;
 	info.nsegs = sg_nents(req->src);
 	info.cb = nss_cryptoapi_aead_done;
-	info.iv_size = crypto_aead_ivsize(aead);
+	info.iv_size = ctx->iv_size;
 	info.hmac_len = crypto_aead_authsize(aead);
 	info.first_sg = req->src;
 	info.last_sg = sg_last(req->src, info.nsegs);
@@ -344,12 +360,18 @@ int nss_cryptoapi_aead_decrypt(struct aead_request *req)
 
 	/*
 	 * Fill the request information structure
+	 * Note: For CTR mode, IV size will be set to AES_BLOCK_SIZE.
+	 * This is because linux gives iv size as 8 while we need to alloc 16 bytes
+	 * in crypto hdr to accomodate
+	 * - 4 bytes of nonce
+	 * - 8 bytes of IV
+	 * - 4 bytes of initial counter
 	 */
 	info.iv = req->iv;
 	info.first_sg = req->src;
 	info.nsegs = sg_nents(req->src);
 	info.cb = nss_cryptoapi_aead_done;
-	info.iv_size = crypto_aead_ivsize(aead);
+	info.iv_size = ctx->iv_size;
 	info.hmac_len = crypto_aead_authsize(aead);
 	info.skip = req->assoclen + crypto_aead_ivsize(aead);
 

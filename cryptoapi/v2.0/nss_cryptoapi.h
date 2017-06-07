@@ -37,11 +37,11 @@
  * Cipher mode
  */
 enum nss_cryptoapi_cipher_mode {
-	NSS_CRYPTOAPI_CIPHER_MODE_NONE = 0,	/* NULL cipher mode */
-	NSS_CRYPTOAPI_CIPHER_MODE_ECB,		/* Electronic Code Block */
-	NSS_CRYPTOAPI_CIPHER_MODE_CBC,		/* Cipher Block Chaining */
-	NSS_CRYPTOAPI_CIPHER_MODE_CTR,		/* Counter Mode */
-	NSS_CRYPTOAPI_CIPHER_MODE_GCM,		/* Galois Counter Mode */
+	NSS_CRYPTOAPI_CIPHER_MODE_NONE = 0,		/* NULL cipher mode */
+	NSS_CRYPTOAPI_CIPHER_MODE_ECB,			/* Electronic Code Block */
+	NSS_CRYPTOAPI_CIPHER_MODE_CBC,			/* Cipher Block Chaining */
+	NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,		/* Counter Mode */
+	NSS_CRYPTOAPI_CIPHER_MODE_GCM,			/* Galois Counter Mode */
 	NSS_CRYPTOAPI_CIPHER_MODE_MAX
 };
 
@@ -92,6 +92,7 @@ struct nss_cryptoapi_ctx {
 	uint32_t sid;				/* Session index */
 	uint32_t ctx_iv[NSS_CRYPTOAPI_MAX_IV];	/* Initial IV for the context */
 
+	uint16_t iv_size;			/* IV size */
 	uint16_t authsize;			/* HMAC length */
 	uint16_t magic;				/* Magic */
 	bool fallback_req;			/* SW fallback required for algorithm */
@@ -104,6 +105,7 @@ struct nss_cryptoapi_algo_info {
 	const char *cra_name;				/* CryptoAPI name */
 	uint16_t cipher_keylen;				/* Cipher key length */
 	uint16_t auth_keylen;				/* Authentication key length */
+	uint16_t nonce;					/* nonce value for counter mode */
 	enum nss_crypto_cmn_algo algo;			/* NSS crypto algorithm ID */
 	enum nss_cryptoapi_cipher_mode cipher_mode;	/* Cipher mode */
 	enum nss_cryptoapi_auth_mode auth_mode;		/* Authentication mode */

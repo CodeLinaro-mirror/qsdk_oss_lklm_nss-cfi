@@ -40,6 +40,7 @@
 #include <crypto/algapi.h>
 #include <crypto/aead.h>
 #include <crypto/authenc.h>
+#include <crypto/ctr.h>
 
 #include <nss_api_if.h>
 #include <nss_crypto_cmn.h>
@@ -139,6 +140,15 @@ int nss_cryptoapi_ablk_setkey(struct crypto_ablkcipher *cipher, const u8 *key, u
 	if (!ctx->info) {
 		crypto_ablkcipher_set_flags(cipher, CRYPTO_TFM_RES_BAD_KEY_LEN);
 		return -EINVAL;
+	}
+
+	ctx->iv_size = crypto_ablkcipher_ivsize(cipher);
+
+	if (ctx->info->cipher_mode == NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686) {
+		keylen = keylen - CTR_RFC3686_NONCE_SIZE;
+		memcpy(ctx->ctx_iv, key + keylen, CTR_RFC3686_NONCE_SIZE);
+		ctx->ctx_iv[3] = ntohl(0x1);
+		ctx->iv_size += CTR_RFC3686_NONCE_SIZE + sizeof(uint32_t);
 	}
 
 	/*
@@ -275,7 +285,7 @@ int nss_cryptoapi_ablk_encrypt(struct ablkcipher_request *req)
 	info.nsegs = sg_nents(req->src);
 	info.op_dir = NSS_CRYPTO_OP_DIR_ENC;
 	info.cb = nss_cryptoapi_ablkcipher_done;
-	info.iv_size = crypto_ablkcipher_ivsize(cipher);
+	info.iv_size = ctx->iv_size;
 	info.first_sg = req->src;
 
 	/*
@@ -354,10 +364,16 @@ int nss_cryptoapi_ablk_decrypt(struct ablkcipher_request *req)
 
 	/*
 	 * Fill the request information structure
+	 * Note: For CTR mode, IV size will be set to AES_BLOCK_SIZE.
+	 * This is because linux gives iv size as 8 while we need to alloc 16 bytes
+	 * in crypto hdr to accomodate
+	 * - 4 bytes of nonce
+	 * - 8 bytes of IV
+	 * - 4 bytes of initial counter
 	 */
 	info.iv = req->info;
 	info.nsegs = sg_nents(req->src);
-	info.iv_size = crypto_ablkcipher_ivsize(cipher);
+	info.iv_size = ctx->iv_size;
 	info.op_dir = NSS_CRYPTO_OP_DIR_DEC;
 	info.cb = nss_cryptoapi_ablkcipher_done;
 	info.first_sg = req->src;
