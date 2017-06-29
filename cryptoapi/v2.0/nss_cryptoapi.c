@@ -51,7 +51,7 @@
 #include <nss_crypto_api.h>
 #include <nss_crypto_defines.h>
 #include <nss_crypto_hdr.h>
-#include "nss_cryptoapi.h"
+#include "nss_cryptoapi_private.h"
 
 bool enable_aead = true;
 module_param(enable_aead, bool, S_IRUGO);

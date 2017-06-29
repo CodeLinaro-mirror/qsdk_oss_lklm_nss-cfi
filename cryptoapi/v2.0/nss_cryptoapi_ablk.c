@@ -48,9 +48,29 @@
 #include <nss_crypto_api.h>
 #include <nss_crypto_hdr.h>
 #include <nss_crypto_defines.h>
-#include "nss_cryptoapi.h"
+#include <nss_cryptoapi.h>
+#include "nss_cryptoapi_private.h"
 
 extern struct nss_cryptoapi g_cryptoapi;
+
+/*
+ * nss_cryptoapi_ablk_ctx2session()
+ *	Cryptoapi function to get the session ID for an ablk cipher
+ */
+int nss_cryptoapi_ablk_ctx2session(struct crypto_ablkcipher *ablk, uint32_t *sid)
+{
+	struct crypto_tfm *tfm = crypto_ablkcipher_tfm(ablk);
+	struct nss_cryptoapi_ctx *ctx;
+
+	if (strncmp("nss-", crypto_tfm_alg_driver_name(tfm), 4))
+		return -EINVAL;
+
+	ctx = crypto_ablkcipher_ctx(ablk);
+	*sid = ctx->sid;
+
+	return 0;
+}
+EXPORT_SYMBOL(nss_cryptoapi_ablk_ctx2session);
 
 /*
  * nss_cryptoapi_ablkcipher_init()

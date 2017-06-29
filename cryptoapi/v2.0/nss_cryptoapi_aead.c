@@ -50,7 +50,27 @@
 #include <nss_crypto_api.h>
 #include <nss_crypto_hdr.h>
 #include <nss_crypto_defines.h>
-#include "nss_cryptoapi.h"
+#include <nss_cryptoapi.h>
+#include "nss_cryptoapi_private.h"
+
+/*
+ * nss_cryptoapi_aead_ctx2session()
+ *	Cryptoapi function to get the session ID for an AEAD
+ */
+int nss_cryptoapi_aead_ctx2session(struct crypto_aead *aead, uint32_t *sid)
+{
+	struct crypto_tfm *tfm = crypto_aead_tfm(aead);
+	struct nss_cryptoapi_ctx *ctx = crypto_aead_ctx(aead);
+
+	if (strncmp("nss-", crypto_tfm_alg_driver_name(tfm), 4))
+		return -EINVAL;
+
+	ctx = crypto_aead_ctx(aead);
+	*sid = ctx->sid;
+
+	return 0;
+}
+EXPORT_SYMBOL(nss_cryptoapi_aead_ctx2session);
 
 /*
  * nss_cryptoapi_aead_init()

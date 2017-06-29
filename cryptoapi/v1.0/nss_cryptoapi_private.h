@@ -16,8 +16,8 @@
  *
  */
 
-#ifndef __NSS_CRYPTOAPI_H
-#define __NSS_CRYPTOAPI_H
+#ifndef __NSS_CRYPTOAPI_PRIVATE_H
+#define __NSS_CRYPTOAPI_PRIVATE_H
 
 #define NSS_CRYPTOAPI_MAX_DATA_LEN ((uint16_t) -1)
 #define nss_cryptoapi_sg_has_frags(s) sg_next(s)
@@ -29,7 +29,7 @@
 
 /*
  *  @brief Cryptoapi sg virtual addresses
- * 	used during Encryption/Decryption operations.
+ *	used during Encryption/Decryption operations.
  */
 struct nss_cryptoapi_addr {
 	uint8_t *src;
@@ -133,7 +133,7 @@ static inline uint8_t nss_cryptoapi_get_skip(uint8_t *addr, uint8_t *start)
 
 /*
  * nss_cryptoapi_check_unalign()
- * 	Cryptoapi verify if length is aligned to boundary.
+ *	Cryptoapi verify if length is aligned to boundary.
  */
 static inline bool nss_cryptoapi_check_unalign(uint32_t len, uint32_t boundary)
 {
@@ -200,5 +200,5 @@ int nss_cryptoapi_sha1_hmac_digest(struct ahash_request *req);
 int nss_cryptoapi_sha1_hmac_export(struct ahash_request *req, void *out);
 int nss_cryptoapi_sha1_hmac_import(struct ahash_request *req, const void *in);
 
-#endif /* __NSS_CRYPTOAPI_H */
+#endif /* __NSS_CRYPTOAPI_PRIVATE_H */
 
