@@ -114,6 +114,24 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
 	},
+	{
+		.cra_name = "ecb(aes)",
+		.cipher_keylen = AES_KEYSIZE_128,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES128_ECB,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_ECB,
+	},
+	{
+		.cra_name = "ecb(aes)",
+		.cipher_keylen = AES_KEYSIZE_192,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES192_ECB,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_ECB,
+	},
+	{
+		.cra_name = "ecb(aes)",
+		.cipher_keylen = AES_KEYSIZE_256,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES256_ECB,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_ECB,
+	},
 
 	/*
 	 * Aynsc non-keyed HASH digests
@@ -477,6 +495,28 @@ static struct crypto_alg cryptoapi_ablkcipher_algs[] = {
 				.setkey         = nss_cryptoapi_ablk_setkey,
 				.encrypt        = nss_cryptoapi_ablk_encrypt,
 				.decrypt        = nss_cryptoapi_ablk_decrypt,
+			},
+		},
+	},
+	{
+		.cra_name = "ecb(aes)",
+		.cra_driver_name = "nss-ecb-aes",
+		.cra_priority = 10000,
+		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
+		.cra_blocksize = AES_BLOCK_SIZE,
+		.cra_ctxsize = sizeof(struct nss_cryptoapi_ctx),
+		.cra_alignmask = 0,
+		.cra_type = &crypto_ablkcipher_type,
+		.cra_module = THIS_MODULE,
+		.cra_init = nss_cryptoapi_ablkcipher_init,
+		.cra_exit = nss_cryptoapi_ablkcipher_exit,
+		.cra_u = {
+			.ablkcipher = {
+				.min_keysize = AES_MIN_KEY_SIZE,
+				.max_keysize = AES_MAX_KEY_SIZE,
+				.setkey = nss_cryptoapi_ablk_setkey,
+				.encrypt = nss_cryptoapi_ablk_encrypt,
+				.decrypt = nss_cryptoapi_ablk_decrypt,
 			},
 		},
 	},
