@@ -181,6 +181,9 @@ int nss_cryptoapi_ablk_setkey(struct crypto_ablkcipher *cipher, const u8 *key, u
 	data.algo = ctx->info->algo;
 	data.cipher_key = key;
 
+	if (data.algo >= NSS_CRYPTO_CMN_ALGO_MAX)
+		return -ERANGE;
+
 	status = nss_crypto_session_alloc(ctx->user, &data, &ctx->sid);
 	if (status < 0) {
 		nss_cfi_err("%p: Unable to allocate crypto session(%d)\n", ctx, status);
