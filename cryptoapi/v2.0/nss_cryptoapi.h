@@ -120,19 +120,6 @@ struct nss_cryptoapi_ctx {
 };
 
 /*
- * NSS Crypto specific structure to store the details of supported algorithms
- */
-struct nss_cryptoapi_algo_info {
-	const char *cra_name;				/* CryptoAPI name */
-	uint16_t cipher_keylen;				/* Cipher key length */
-	uint16_t auth_keylen;				/* Authentication key length */
-	uint16_t nonce;					/* nonce value for counter mode */
-	enum nss_crypto_cmn_algo algo;			/* NSS crypto algorithm ID */
-	enum nss_cryptoapi_cipher_mode cipher_mode;	/* Cipher mode */
-	enum nss_cryptoapi_auth_mode auth_mode;		/* Authentication mode */
-};
-
-/*
  * Request specific structure
  */
 struct nss_cryptoapi_info {
@@ -146,6 +133,23 @@ struct nss_cryptoapi_info {
 	uint8_t hmac_len;			/* HMAC length */
 	uint8_t ahash_skip;			/* AHASH data length */
 	enum nss_crypto_op_dir op_dir;		/* Operation direction */
+};
+
+typedef void (*nss_cryptoapi_aead_tx_proc_method_t )(struct nss_cryptoapi_ctx *ctx,
+		struct aead_request *req, struct nss_cryptoapi_info *info, bool encrypt);
+
+/*
+ * NSS Crypto specific structure to store the details of supported algorithms
+ */
+struct nss_cryptoapi_algo_info {
+	const char *cra_name;				/* CryptoAPI name */
+	uint16_t cipher_keylen;				/* Cipher key length */
+	uint16_t auth_keylen;				/* Authentication key length */
+	uint16_t nonce;					/* nonce value for counter mode */
+	enum nss_crypto_cmn_algo algo;			/* NSS crypto algorithm ID */
+	enum nss_cryptoapi_cipher_mode cipher_mode;	/* Cipher mode */
+	enum nss_cryptoapi_auth_mode auth_mode;		/* Authentication mode */
+	nss_cryptoapi_aead_tx_proc_method_t aead_tx_proc; /* Tx processing function */
 };
 
 #if defined NSS_CFI_DEBUG
@@ -192,7 +196,7 @@ static inline void nss_cryptoapi_clear_magic(struct nss_cryptoapi_ctx *ctx)
  */
 extern struct nss_cryptoapi g_cryptoapi;
 extern int nss_cryptoapi_status2error(struct nss_cryptoapi_ctx *ctx, uint8_t status);
-extern struct nss_cryptoapi_algo_info *nss_cryptoapi_cra_name2info(const char *cra_name, uint16_t keylen);
+extern struct nss_cryptoapi_algo_info *nss_cryptoapi_cra_name2info(const char *cra_name, uint16_t enc_keylen, uint16_t auth_keylen);
 extern int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_info *info, void *app_data, bool ahash);
 /*
  * Debug fs
@@ -208,6 +212,12 @@ extern int nss_cryptoapi_aead_setkey(struct crypto_aead *tfm, const u8 *key, uns
 extern int nss_cryptoapi_aead_setauthsize(struct crypto_aead *authenc, unsigned int authsize);
 extern int nss_cryptoapi_aead_encrypt(struct aead_request *req);
 extern int nss_cryptoapi_aead_decrypt(struct aead_request *req);
+extern void nss_cryptoapi_aead_echainiv_tx_proc(struct nss_cryptoapi_ctx *ctx, struct aead_request *req,
+				struct nss_cryptoapi_info *info, bool encrypt);
+extern void nss_cryptoapi_aead_seqiv_tx_proc(struct nss_cryptoapi_ctx *ctx, struct aead_request *req,
+				struct nss_cryptoapi_info *info, bool encrypt);
+extern void nss_cryptoapi_aead_tx_proc(struct nss_cryptoapi_ctx *ctx, struct aead_request *req,
+				struct nss_cryptoapi_info *info, bool encrypt);
 
 /*
  * ABLKCIPHER

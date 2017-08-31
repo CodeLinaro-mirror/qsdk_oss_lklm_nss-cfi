@@ -136,7 +136,7 @@ int nss_cryptoapi_ablk_setkey(struct crypto_ablkcipher *cipher, const u8 *key, u
 	 */
 	NSS_CRYPTOAPI_VERIFY_MAGIC(ctx);
 
-	ctx->info = nss_cryptoapi_cra_name2info(crypto_tfm_alg_name(tfm), keylen);
+	ctx->info = nss_cryptoapi_cra_name2info(crypto_tfm_alg_name(tfm), keylen, 0);
 	if (!ctx->info) {
 		crypto_ablkcipher_set_flags(cipher, CRYPTO_TFM_RES_BAD_KEY_LEN);
 		return -EINVAL;

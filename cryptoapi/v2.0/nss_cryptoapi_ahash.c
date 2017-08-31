@@ -140,7 +140,7 @@ int nss_cryptoapi_ahash_setkey(struct crypto_ahash *ahash, const u8 *key, unsign
 	 */
 	NSS_CRYPTOAPI_VERIFY_MAGIC(ctx);
 
-	ctx->info = nss_cryptoapi_cra_name2info(crypto_tfm_alg_name(tfm), keylen);
+	ctx->info = nss_cryptoapi_cra_name2info(crypto_tfm_alg_name(tfm), 0, keylen);
 	if (!ctx->info) {
 		crypto_ahash_set_flags(ahash, CRYPTO_TFM_RES_BAD_KEY_LEN);
 		return -EINVAL;
@@ -228,7 +228,7 @@ int nss_cryptoapi_ahash_init(struct ahash_request *req)
 		 * Set the key length to zero as the need is
 		 * to search for a non-keyed hash algo.
 		 */
-		ctx->info = nss_cryptoapi_cra_name2info(crypto_tfm_alg_name(tfm), 0);
+		ctx->info = nss_cryptoapi_cra_name2info(crypto_tfm_alg_name(tfm), 0, 0);
 		if (!ctx->info) {
 			crypto_ahash_set_flags(ahash, CRYPTO_TFM_RES_BAD_KEY_LEN);
 			return -EINVAL;

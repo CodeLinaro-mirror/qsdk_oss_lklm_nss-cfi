@@ -178,6 +178,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_echainiv_tx_proc,
 	},
 	{
 		.cra_name = "echainiv(authenc(hmac(sha256),cbc(aes)))",
@@ -186,6 +187,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA256_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_echainiv_tx_proc,
 	},
 	{
 		.cra_name = "seqiv(authenc(hmac(sha1),rfc3686(ctr(aes))))",
@@ -195,6 +197,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_seqiv_tx_proc,
 	},
 	{
 		.cra_name = "seqiv(authenc(hmac(sha256),rfc3686(ctr(aes))))",
@@ -204,6 +207,25 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_seqiv_tx_proc,
+	},
+	{
+		.cra_name = "authenc(hmac(sha1),cbc(aes))",
+		.cipher_keylen = AES_KEYSIZE_128,
+		.auth_keylen = SHA1_DIGEST_SIZE,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA160_HMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
+	},
+	{
+		.cra_name = "authenc(hmac(sha256),cbc(aes))",
+		.cipher_keylen = AES_KEYSIZE_128,
+		.auth_keylen = SHA256_DIGEST_SIZE,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA256_HMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
 	},
 
 	/*
@@ -216,6 +238,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CBC_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_echainiv_tx_proc,
 	},
 	{
 		.cra_name = "echainiv(authenc(hmac(sha256),cbc(aes)))",
@@ -224,6 +247,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CBC_SHA256_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_echainiv_tx_proc,
 	},
 	{
 		.cra_name = "seqiv(authenc(hmac(sha1),rfc3686(ctr(aes))))",
@@ -233,6 +257,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_seqiv_tx_proc,
 	},
 	{
 		.cra_name = "seqiv(authenc(hmac(sha256),rfc3686(ctr(aes))))",
@@ -242,6 +267,25 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_seqiv_tx_proc,
+	},
+	{
+		.cra_name = "authenc(hmac(sha1),cbc(aes))",
+		.cipher_keylen = AES_KEYSIZE_192,
+		.auth_keylen = SHA1_DIGEST_SIZE,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CBC_SHA160_HMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
+	},
+	{
+		.cra_name = "authenc(hmac(sha256),cbc(aes))",
+		.cipher_keylen = AES_KEYSIZE_192,
+		.auth_keylen = SHA256_DIGEST_SIZE,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CBC_SHA256_HMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
 	},
 
 	/*
@@ -254,6 +298,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_echainiv_tx_proc,
 	},
 	{
 		.cra_name = "echainiv(authenc(hmac(sha256),cbc(aes)))",
@@ -262,6 +307,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA256_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_echainiv_tx_proc,
 	},
 	{
 		.cra_name = "seqiv(authenc(hmac(sha1),rfc3686(ctr(aes))))",
@@ -271,6 +317,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_seqiv_tx_proc,
 	},
 	{
 		.cra_name = "seqiv(authenc(hmac(sha256),rfc3686(ctr(aes))))",
@@ -280,6 +327,25 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_seqiv_tx_proc,
+	},
+	{
+		.cra_name = "authenc(hmac(sha1),cbc(aes))",
+		.cipher_keylen = AES_KEYSIZE_256,
+		.auth_keylen = SHA1_DIGEST_SIZE,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA160_HMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
+	},
+	{
+		.cra_name = "authenc(hmac(sha256),cbc(aes))",
+		.cipher_keylen = AES_KEYSIZE_256,
+		.auth_keylen = SHA256_DIGEST_SIZE,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA256_HMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
 	},
 
 	/*
@@ -292,6 +358,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.algo = NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_echainiv_tx_proc,
 	},
 	{
 		.cra_name = "echainiv(authenc(hmac(sha256),cbc(des3_ede)))",
@@ -300,6 +367,25 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.algo = NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA256_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_echainiv_tx_proc,
+	},
+	{
+		.cra_name = "authenc(hmac(sha1),cbc(des3_ede))",
+		.cipher_keylen = DES3_EDE_KEY_SIZE,
+		.auth_keylen = SHA1_DIGEST_SIZE,
+		.algo = NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA160_HMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
+	},
+	{
+		.cra_name = "authenc(hmac(sha256),cbc(des3_ede))",
+		.cipher_keylen = DES3_EDE_KEY_SIZE,
+		.auth_keylen = SHA256_DIGEST_SIZE,
+		.algo = NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA256_HMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
 	}
 };
 
@@ -427,6 +513,96 @@ struct aead_alg cryptoapi_aead_algs[] = {
 		 */
 		.base = {
 			.cra_name = "echainiv(authenc(hmac(sha256),cbc(des3_ede)))",
+			.cra_driver_name = "nss-hmac-sha256-cbc-3des",
+			.cra_priority = 300,
+			.cra_flags = CRYPTO_ALG_ASYNC,
+			.cra_blocksize = DES3_EDE_BLOCK_SIZE,
+			.cra_ctxsize = sizeof(struct nss_cryptoapi_ctx),
+			.cra_alignmask = 0,
+			.cra_module = THIS_MODULE,
+		},
+
+		.init = nss_cryptoapi_aead_init,
+		.exit = nss_cryptoapi_aead_exit,
+		.ivsize = DES3_EDE_BLOCK_SIZE,
+		.maxauthsize = SHA256_DIGEST_SIZE,
+		.setkey = nss_cryptoapi_aead_setkey,
+		.setauthsize = nss_cryptoapi_aead_setauthsize,
+		.encrypt = nss_cryptoapi_aead_encrypt,
+		.decrypt = nss_cryptoapi_aead_decrypt,
+	},
+	{
+		.base = {
+			.cra_name = "authenc(hmac(sha1),cbc(aes))",
+			.cra_driver_name = "nss-hmac-sha1-cbc-aes",
+			.cra_priority = 10000,
+			.cra_flags = CRYPTO_ALG_ASYNC,
+			.cra_blocksize = AES_BLOCK_SIZE,
+			.cra_ctxsize = sizeof(struct nss_cryptoapi_ctx),
+			.cra_alignmask = 0,
+			.cra_module = THIS_MODULE,
+		},
+
+		.init = nss_cryptoapi_aead_init,
+		.exit = nss_cryptoapi_aead_exit,
+		.ivsize = AES_BLOCK_SIZE,
+		.maxauthsize = SHA1_DIGEST_SIZE,
+		.setkey = nss_cryptoapi_aead_setkey,
+		.setauthsize = nss_cryptoapi_aead_setauthsize,
+		.encrypt = nss_cryptoapi_aead_encrypt,
+		.decrypt = nss_cryptoapi_aead_decrypt,
+	},
+	{	/*
+		 * sha256, aes-cbc
+		 */
+		.base = {
+			.cra_name = "authenc(hmac(sha256),cbc(aes))",
+			.cra_driver_name = "nss-hmac-sha256-cbc-aes",
+			.cra_priority = 10000,
+			.cra_flags = CRYPTO_ALG_ASYNC,
+			.cra_blocksize = AES_BLOCK_SIZE,
+			.cra_ctxsize = sizeof(struct nss_cryptoapi_ctx),
+			.cra_alignmask = 0,
+			.cra_module = THIS_MODULE,
+		},
+
+		.init = nss_cryptoapi_aead_init,
+		.exit = nss_cryptoapi_aead_exit,
+		.ivsize = AES_BLOCK_SIZE,
+		.maxauthsize = SHA256_DIGEST_SIZE,
+		.setkey = nss_cryptoapi_aead_setkey,
+		.setauthsize = nss_cryptoapi_aead_setauthsize,
+		.encrypt = nss_cryptoapi_aead_encrypt,
+		.decrypt = nss_cryptoapi_aead_decrypt,
+	},
+	{	/*
+		 * sha1, 3des
+		 */
+		.base = {
+			.cra_name = "authenc(hmac(sha1),cbc(des3_ede))",
+			.cra_driver_name = "nss-hmac-sha1-cbc-3des",
+			.cra_priority = 300,
+			.cra_flags = CRYPTO_ALG_ASYNC,
+			.cra_blocksize = DES3_EDE_BLOCK_SIZE,
+			.cra_ctxsize = sizeof(struct nss_cryptoapi_ctx),
+			.cra_alignmask = 0,
+			.cra_module = THIS_MODULE,
+		},
+
+		.init = nss_cryptoapi_aead_init,
+		.exit = nss_cryptoapi_aead_exit,
+		.ivsize = DES3_EDE_BLOCK_SIZE,
+		.maxauthsize = SHA1_DIGEST_SIZE,
+		.setkey = nss_cryptoapi_aead_setkey,
+		.setauthsize = nss_cryptoapi_aead_setauthsize,
+		.encrypt = nss_cryptoapi_aead_encrypt,
+		.decrypt = nss_cryptoapi_aead_decrypt,
+	},
+	{	/*
+		 * sha256, 3des
+		 */
+		.base = {
+			.cra_name = "authenc(hmac(sha256),cbc(des3_ede))",
 			.cra_driver_name = "nss-hmac-sha256-cbc-3des",
 			.cra_priority = 300,
 			.cra_flags = CRYPTO_ALG_ASYNC,
@@ -692,19 +868,19 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
  * nss_cryptoapi_cra_name2info()
  *     Lookup the associated algorithm in NSS for the given transformation
  */
-struct nss_cryptoapi_algo_info *nss_cryptoapi_cra_name2info(const char *cra_name, uint16_t keylen)
+struct nss_cryptoapi_algo_info *nss_cryptoapi_cra_name2info(const char *cra_name, uint16_t enc_keylen,
+							uint16_t auth_keylen)
 {
 	struct nss_cryptoapi_algo_info *info = g_algo_info;
+	uint16_t klen;
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(g_algo_info); i++, info++) {
 		if (strncmp(info->cra_name, cra_name, strlen(cra_name)))
 			continue;
 
-		if (info->cipher_keylen == (keylen - info->nonce))
-			return info;
-
-		if (info->auth_keylen == keylen)
+		klen = enc_keylen - info->nonce;
+		if ((info->cipher_keylen == klen) && (info->auth_keylen == auth_keylen))
 			return info;
 	}
 

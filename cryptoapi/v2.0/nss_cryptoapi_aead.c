@@ -147,7 +147,7 @@ int nss_cryptoapi_aead_setkey(struct crypto_aead *aead, const u8 *key, unsigned 
 		return -EIO;
 	}
 
-	ctx->info = nss_cryptoapi_cra_name2info(crypto_tfm_alg_name(tfm), keys.enckeylen);
+	ctx->info = nss_cryptoapi_cra_name2info(crypto_tfm_alg_name(tfm), keys.enckeylen, keys.authkeylen);
 	if (!ctx->info) {
 		nss_cfi_err("%p: Unable to find algorithm with keylen\n", ctx);
 		crypto_aead_set_flags(aead, CRYPTO_TFM_RES_BAD_KEY_LEN);
@@ -261,6 +261,79 @@ void nss_cryptoapi_aead_done(void *app_data, struct nss_crypto_hdr *ch, uint8_t 
 }
 
 /*
+ * nss_cryptoapi_aead_echainiv_tx_proc()
+ *	Fill echainiv information structure
+ */
+void nss_cryptoapi_aead_echainiv_tx_proc(struct nss_cryptoapi_ctx *ctx, struct aead_request *req,
+					struct nss_cryptoapi_info *info, bool encrypt)
+{
+	struct crypto_aead *aead = crypto_aead_reqtfm(req);
+
+	memcpy(req->iv, sg_virt(req->src) + req->assoclen, crypto_aead_ivsize(aead));
+
+	info->iv = req->iv;
+	info->nsegs = sg_nents(req->src);
+	info->cb = nss_cryptoapi_aead_done;
+	info->iv_size = ctx->iv_size;
+	info->hmac_len = crypto_aead_authsize(aead);
+	info->ahash_skip = encrypt ? crypto_aead_authsize(aead) : 0;
+	info->first_sg = req->src;
+	info->last_sg = sg_last(req->src, info->nsegs);
+	info->skip = req->assoclen + crypto_aead_ivsize(aead);
+}
+
+/*
+ * nss_cryptoapi_aead_seqiv_tx_proc()
+ *	Fill seqiv information structure
+ */
+void nss_cryptoapi_aead_seqiv_tx_proc(struct nss_cryptoapi_ctx *ctx, struct aead_request *req,
+					struct nss_cryptoapi_info *info, bool encrypt)
+{
+	struct crypto_aead *aead = crypto_aead_reqtfm(req);
+
+	memcpy(req->iv, sg_virt(req->src) + req->assoclen, crypto_aead_ivsize(aead));
+
+	/*
+	 * Fill the request information structure
+	 * Note: For CTR mode, IV size will be set to AES_BLOCK_SIZE.
+	 * This is because linux gives iv size as 8 while we need to
+	 * alloc 16 bytes in crypto hdr to accomodate:
+	 * - 4 bytes of nonce
+	 * - 8 bytes of IV
+	 * - 4 bytes of initial counter
+	 */
+	info->iv = req->iv;
+	info->nsegs = sg_nents(req->src);
+	info->cb = nss_cryptoapi_aead_done;
+	info->iv_size = ctx->iv_size;
+	info->hmac_len = crypto_aead_authsize(aead);
+	info->ahash_skip = encrypt ? crypto_aead_authsize(aead) : 0;
+	info->first_sg = req->src;
+	info->last_sg = sg_last(req->src, info->nsegs);
+	info->skip = req->assoclen + crypto_aead_ivsize(aead);
+}
+
+/*
+ * nss_cryptoapi_aead_tx_proc()
+ *	Fill authenc information structure
+ */
+void nss_cryptoapi_aead_tx_proc(struct nss_cryptoapi_ctx *ctx, struct aead_request *req,
+				struct nss_cryptoapi_info *info, bool encrypt)
+{
+	struct crypto_aead *aead = crypto_aead_reqtfm(req);
+
+	info->iv = req->iv;
+	info->nsegs = sg_nents(req->src);
+	info->cb = nss_cryptoapi_aead_done;
+	info->iv_size = ctx->iv_size;
+	info->hmac_len = crypto_aead_authsize(aead);
+	info->ahash_skip = encrypt ? crypto_aead_authsize(aead) : 0;
+	info->first_sg = req->src;
+	info->last_sg = sg_last(req->src, info->nsegs);
+	info->skip = req->assoclen;
+}
+
+/*
  * nss_cryptoapi_aead_encrypt()
  * 	Crytoapi common encrypt for (AES/3DES) (SHA1/SHA256 with CBC) algorithms
  */
@@ -296,26 +369,8 @@ int nss_cryptoapi_aead_encrypt(struct aead_request *req)
 		return -EINVAL;
 	}
 
-	memcpy(req->iv, sg_virt(req->src) + req->assoclen, crypto_aead_ivsize(aead));
-
-	/*
-	 * Fill the request information structure
-	 * Note: For CTR mode, IV size will be set to AES_BLOCK_SIZE.
-	 * This is because linux gives iv size as 8 while we need to
-	 * alloc 16 bytes in crypto hdr to accomodate:
-	 * - 4 bytes of nonce
-	 * - 8 bytes of IV
-	 * - 4 bytes of initial counter
-	 */
-	info.iv = req->iv;
-	info.nsegs = sg_nents(req->src);
-	info.cb = nss_cryptoapi_aead_done;
-	info.iv_size = ctx->iv_size;
-	info.hmac_len = crypto_aead_authsize(aead);
-	info.ahash_skip = crypto_aead_authsize(aead);
-	info.first_sg = req->src;
-	info.last_sg = sg_last(req->src, info.nsegs);
-	info.skip = req->assoclen + crypto_aead_ivsize(aead);
+	BUG_ON(!ctx->info->aead_tx_proc);
+	ctx->info->aead_tx_proc(ctx, req, &info, true);
 
 	return nss_cryptoapi_transform(ctx, &info, (void *)req, false);
 }
@@ -356,30 +411,8 @@ int nss_cryptoapi_aead_decrypt(struct aead_request *req)
 		return -EINVAL;
 	}
 
-	/*
-	 * In case of decrypt operation, ipsec include hmac size in req->cryptlen
-	 * skip encryption and authentication on hmac trasmitted with data.
-	 */
-	memcpy(req->iv, sg_virt(req->src) + req->assoclen, crypto_aead_ivsize(aead));
-
-	/*
-	 * Fill the request information structure
-	 * Note: For CTR mode, IV size will be set to AES_BLOCK_SIZE.
-	 * This is because linux gives iv size as 8 while we need to alloc 16 bytes
-	 * in crypto hdr to accomodate
-	 * - 4 bytes of nonce
-	 * - 8 bytes of IV
-	 * - 4 bytes of initial counter
-	 */
-	info.iv = req->iv;
-	info.first_sg = req->src;
-	info.nsegs = sg_nents(req->src);
-	info.cb = nss_cryptoapi_aead_done;
-	info.iv_size = ctx->iv_size;
-	info.hmac_len = crypto_aead_authsize(aead);
-	info.ahash_skip = 0;
-	info.last_sg = sg_last(req->src, info.nsegs);
-	info.skip = req->assoclen + crypto_aead_ivsize(aead);
+	BUG_ON(!ctx->info->aead_tx_proc);
+	ctx->info->aead_tx_proc(ctx, req, &info, false);
 
 	return nss_cryptoapi_transform(ctx, &info, (void *)req, false);
 }
