@@ -53,6 +53,18 @@
 #include <nss_crypto_hdr.h>
 #include "nss_cryptoapi.h"
 
+bool enable_aead = true;
+module_param(enable_aead, bool, S_IRUGO);
+MODULE_PARM_DESC(enable_aead, "Enable Cryptoapi AEAD support");
+
+bool enable_ablk = true;
+module_param(enable_ablk, bool, S_IRUGO);
+MODULE_PARM_DESC(enable_ablk, "Enable Cryptoapi ABLK support");
+
+bool enable_ahash = true;
+module_param(enable_ahash, bool, S_IRUGO);
+MODULE_PARM_DESC(enable_ahash, "Enable Cryptoapi AHASH support");
+
 struct nss_cryptoapi_algo_info g_algo_info[] = {
 	/*
 	 * Aynsc Block ciphers
@@ -918,21 +930,21 @@ void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
 
 	nss_cfi_info("%p: Registering algorithms with Linux\n", sc);
 
-	for (i = 0; i < ARRAY_SIZE(cryptoapi_ablkcipher_algs); i++, ablk++) {
+	for (i = 0; enable_ablk && (i < ARRAY_SIZE(cryptoapi_ablkcipher_algs)); i++, ablk++) {
 		if (crypto_register_alg(ablk)) {
 			nss_cfi_err("%p: ABLK registration failed(%s)\n", sc, ablk->cra_name);
 			ablk->cra_flags = 0;
 		}
 	}
 
-	for (i = 0; i < ARRAY_SIZE(cryptoapi_aead_algs); i++, aead++) {
+	for (i = 0; enable_aead && (i < ARRAY_SIZE(cryptoapi_aead_algs)); i++, aead++) {
 		if (crypto_register_aead(aead)) {
 			nss_cfi_err("%p: AEAD registration failed(%s)\n", sc, aead->base.cra_name);
 			aead->base.cra_flags = 0;
 		}
 	}
 
-	for (i = 0; i < ARRAY_SIZE(cryptoapi_ahash_algs); i++, ahash++) {
+	for (i = 0; enable_ahash && (i < ARRAY_SIZE(cryptoapi_ahash_algs)); i++, ahash++) {
 		if (crypto_register_ahash(ahash)) {
 			nss_cfi_err("%p: AHASH registration failed(%s)\n", sc, ahash->halg.base.cra_name);
 			ahash->halg.base.cra_flags = 0;
@@ -959,7 +971,7 @@ void nss_cryptoapi_detach_user(void *app_data, struct nss_crypto_user *user)
 
 	nss_cfi_info("unregister nss_cryptoapi\n");
 
-	for (i = 0; i < ARRAY_SIZE(cryptoapi_ablkcipher_algs); i++, ablk++) {
+	for (i = 0; enable_ablk && (i < ARRAY_SIZE(cryptoapi_ablkcipher_algs)); i++, ablk++) {
 		if (!ablk->cra_flags)
 			continue;
 
@@ -967,7 +979,7 @@ void nss_cryptoapi_detach_user(void *app_data, struct nss_crypto_user *user)
 		nss_cfi_info("%p: ABLK unregister succeeded, algo: %s\n", sc, ablk->cra_name);
 	}
 
-	for (i = 0; i < ARRAY_SIZE(cryptoapi_aead_algs); i++, aead++) {
+	for (i = 0; enable_aead && (i < ARRAY_SIZE(cryptoapi_aead_algs)); i++, aead++) {
 		if (!aead->base.cra_flags)
 			continue;
 
@@ -975,7 +987,7 @@ void nss_cryptoapi_detach_user(void *app_data, struct nss_crypto_user *user)
 		nss_cfi_info("%p: AEAD unregister succeeded, algo: %s\n", sc, aead->base.cra_name);
 	}
 
-	for (i = 0; i < ARRAY_SIZE(cryptoapi_ahash_algs); i++, ahash++) {
+	for (i = 0; enable_ahash && (i < ARRAY_SIZE(cryptoapi_ahash_algs)); i++, ahash++) {
 		if (!ahash->halg.base.cra_flags)
 			continue;
 
