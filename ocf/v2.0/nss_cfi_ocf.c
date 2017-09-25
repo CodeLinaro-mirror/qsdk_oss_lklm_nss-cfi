@@ -145,46 +145,15 @@ static int32_t nss_cfi_ocf_decrypt_trap(struct sk_buff *skb, uint32_t session_id
 }
 
 /*
- * Returns true if given skb can be processed by crypto
- */
-static bool nss_cfi_ocf_chk_skb_valid(struct sk_buff *skb)
-{
-	uint32_t tail_room = 0;
-
-	/* Skb fragmentation support unimplemented */
-	if (skb_shinfo(skb)->nr_frags || skb_has_frag_list(skb)) {
-		nss_cfi_err("%p: SKB has fragments, crypto cannot process these buffers\n", skb);
-		return false;
-	}
-
-	/*
-	 * Check if the data buffer has enough tailroom to accomodate the crypto information
-	 */
-	tail_room = skb_tailroom(skb);
-	if (tail_room < NSS_CRYPTO_BUF_TAILROOM ) {
-		nss_cfi_err("%p: Buffer has insufficient tail room :%d required: %d\n",
-					skb, tail_room, NSS_CRYPTO_BUF_TAILROOM);
-		return false;
-	}
-
-	return true;
-}
-
-/*
  * Returns success if cfi can handle the type of buffer sent by OCF
  */
 static struct sk_buff *nss_cfi_ocf_get_skb(struct cryptop *crp)
 {
-	struct sk_buff *skb = NULL;
-
 	/* IOV buffer type support unimplemented */
 	nss_cfi_assert(!(crp->crp_flags & CRYPTO_F_IOV));
 
-	if (crp->crp_flags & CRYPTO_F_SKBUF) {
-		skb = (struct sk_buff *)crp->crp_buf;
-		if (nss_cfi_ocf_chk_skb_valid(skb))
-			return skb;
-	}
+	if (crp->crp_flags & CRYPTO_F_SKBUF)
+		return (struct sk_buff *)crp->crp_buf;
 
 	return NULL;
 }
