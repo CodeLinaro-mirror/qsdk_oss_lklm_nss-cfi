@@ -43,6 +43,7 @@
 #include <crypto/aead.h>
 #include <crypto/authenc.h>
 #include <crypto/ctr.h>
+#include <crypto/internal/hash.h>
 
 #include <nss_api_if.h>
 #include <nss_crypto_cmn.h>
@@ -103,13 +104,48 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	},
 
 	/*
+	 * Aynsc non-keyed HASH digests
+	 */
+	{
+		.cra_name = "sha1",
+		.algo = NSS_CRYPTO_CMN_ALGO_SHA160_HASH,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HASH,
+	},
+	{
+		.cra_name = "sha224",
+		.algo = NSS_CRYPTO_CMN_ALGO_SHA224_HASH,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HASH,
+	},
+	{
+		.cra_name = "sha256",
+		.algo = NSS_CRYPTO_CMN_ALGO_SHA256_HASH,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HASH,
+	},
+
+	/*
+	 * Aynsc keyed HMAC digests
+	 */
+	{
+		.cra_name = "hmac(sha1)",
+		.auth_keylen = SHA1_DIGEST_SIZE,
+		.algo = NSS_CRYPTO_CMN_ALGO_SHA160_HMAC,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+	},
+	{
+		.cra_name = "hmac(sha256)",
+		.auth_keylen = SHA256_DIGEST_SIZE,
+		.algo = NSS_CRYPTO_CMN_ALGO_SHA256_HMAC,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+	},
+
+	/*
 	 * AEAD AES-128
 	 */
 	{
 		.cra_name = "echainiv(authenc(hmac(sha1),cbc(aes)))",
 		.cipher_keylen = AES_KEYSIZE_128,
 		.auth_keylen = SHA1_DIGEST_SIZE,
-		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA1_HMAC,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
 	},
@@ -125,7 +161,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.cra_name = "seqiv(authenc(hmac(sha1),rfc3686(ctr(aes))))",
 		.cipher_keylen = AES_KEYSIZE_128,
 		.auth_keylen = SHA1_DIGEST_SIZE,
-		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CTR_SHA1_HMAC,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CTR_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -147,7 +183,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.cra_name = "echainiv(authenc(hmac(sha1),cbc(aes)))",
 		.cipher_keylen = AES_KEYSIZE_192,
 		.auth_keylen = SHA1_DIGEST_SIZE,
-		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CBC_SHA1_HMAC,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CBC_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
 	},
@@ -163,7 +199,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.cra_name = "seqiv(authenc(hmac(sha1),rfc3686(ctr(aes))))",
 		.cipher_keylen = AES_KEYSIZE_192,
 		.auth_keylen = SHA1_DIGEST_SIZE,
-		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CTR_SHA1_HMAC,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CTR_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -185,7 +221,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.cra_name = "echainiv(authenc(hmac(sha1),cbc(aes)))",
 		.cipher_keylen = AES_KEYSIZE_256,
 		.auth_keylen = SHA1_DIGEST_SIZE,
-		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA1_HMAC,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
 	},
@@ -201,7 +237,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.cra_name = "seqiv(authenc(hmac(sha1),rfc3686(ctr(aes))))",
 		.cipher_keylen = AES_KEYSIZE_256,
 		.auth_keylen = SHA1_DIGEST_SIZE,
-		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CTR_SHA1_HMAC,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CTR_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -223,7 +259,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.cra_name = "echainiv(authenc(hmac(sha1),cbc(des3_ede)))",
 		.cipher_keylen = DES3_EDE_KEY_SIZE,
 		.auth_keylen = SHA1_DIGEST_SIZE,
-		.algo = NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA1_HMAC,
+		.algo = NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
 	},
@@ -458,6 +494,149 @@ static struct crypto_alg cryptoapi_ablkcipher_algs[] = {
 };
 
 /*
+ * AHASH algorithms
+ */
+static struct ahash_alg cryptoapi_ahash_algs[] = {
+	/*
+	 * Async non-keyed HASH digests
+	 */
+	{
+		.init   = nss_cryptoapi_ahash_init,
+		.update = nss_cryptoapi_ahash_update,
+		.final  = nss_cryptoapi_ahash_final,
+		.export = nss_cryptoapi_ahash_export,
+		.import = nss_cryptoapi_ahash_import,
+		.digest = nss_cryptoapi_ahash_digest,
+		.setkey = NULL,
+		.halg   = {
+			.digestsize = SHA1_DIGEST_SIZE,
+			.statesize  = sizeof(struct sha1_state),
+			.base       = {
+				.cra_name        = "sha1",
+				.cra_driver_name = "nss-sha1",
+				.cra_priority    = 1000,
+				.cra_flags       = CRYPTO_ALG_TYPE_AHASH | CRYPTO_ALG_ASYNC,
+				.cra_blocksize   = SHA1_BLOCK_SIZE,
+				.cra_ctxsize     = sizeof(struct nss_cryptoapi_ctx),
+				.cra_alignmask   = 0,
+				.cra_type        = &crypto_ahash_type,
+				.cra_module      = THIS_MODULE,
+				.cra_init        = nss_cryptoapi_ahash_cra_init,
+				.cra_exit        = nss_cryptoapi_ahash_cra_exit,
+			},
+		},
+	},
+	{
+		.init   = nss_cryptoapi_ahash_init,
+		.update = nss_cryptoapi_ahash_update,
+		.final  = nss_cryptoapi_ahash_final,
+		.export = nss_cryptoapi_ahash_export,
+		.import = nss_cryptoapi_ahash_import,
+		.digest = nss_cryptoapi_ahash_digest,
+		.setkey = NULL,
+		.halg   = {
+			.digestsize = SHA224_DIGEST_SIZE,
+			.statesize  = sizeof(struct sha256_state),
+			.base       = {
+				.cra_name        = "sha224",
+				.cra_driver_name = "nss-sha224",
+				.cra_priority    = 1000,
+				.cra_flags       = CRYPTO_ALG_TYPE_AHASH | CRYPTO_ALG_ASYNC,
+				.cra_blocksize   = SHA224_BLOCK_SIZE,
+				.cra_ctxsize     = sizeof(struct nss_cryptoapi_ctx),
+				.cra_alignmask   = 0,
+				.cra_type        = &crypto_ahash_type,
+				.cra_module      = THIS_MODULE,
+				.cra_init        = nss_cryptoapi_ahash_cra_init,
+				.cra_exit        = nss_cryptoapi_ahash_cra_exit,
+			},
+		},
+	},
+	{
+		.init   = nss_cryptoapi_ahash_init,
+		.update = nss_cryptoapi_ahash_update,
+		.final  = nss_cryptoapi_ahash_final,
+		.export = nss_cryptoapi_ahash_export,
+		.import = nss_cryptoapi_ahash_import,
+		.digest = nss_cryptoapi_ahash_digest,
+		.setkey = NULL,
+		.halg   = {
+			.digestsize = SHA256_DIGEST_SIZE,
+			.statesize  = sizeof(struct sha256_state),
+			.base       = {
+				.cra_name        = "sha256",
+				.cra_driver_name = "nss-sha256",
+				.cra_priority    = 1000,
+				.cra_flags       = CRYPTO_ALG_TYPE_AHASH | CRYPTO_ALG_ASYNC,
+				.cra_blocksize   = SHA256_BLOCK_SIZE,
+				.cra_ctxsize     = sizeof(struct nss_cryptoapi_ctx),
+				.cra_alignmask   = 0,
+				.cra_type        = &crypto_ahash_type,
+				.cra_module      = THIS_MODULE,
+				.cra_init        = nss_cryptoapi_ahash_cra_init,
+				.cra_exit        = nss_cryptoapi_ahash_cra_exit,
+			},
+		},
+	},
+
+	/*
+	 * Aynsc keyed HMAC digests
+	 */
+	{
+		.init   = nss_cryptoapi_ahash_init,
+		.update = nss_cryptoapi_ahash_update,
+		.final  = nss_cryptoapi_ahash_final,
+		.export = nss_cryptoapi_ahash_export,
+		.import = nss_cryptoapi_ahash_import,
+		.digest = nss_cryptoapi_ahash_digest,
+		.setkey = nss_cryptoapi_ahash_setkey,
+		.halg   = {
+			.digestsize = SHA1_DIGEST_SIZE,
+			.statesize  = sizeof(struct sha1_state),
+			.base       = {
+				.cra_name        = "hmac(sha1)",
+				.cra_driver_name = "nss-hmac-sha1",
+				.cra_priority    = 1000,
+				.cra_flags       = CRYPTO_ALG_TYPE_AHASH | CRYPTO_ALG_ASYNC,
+				.cra_blocksize   = SHA1_BLOCK_SIZE,
+				.cra_ctxsize     = sizeof(struct nss_cryptoapi_ctx),
+				.cra_alignmask   = 0,
+				.cra_type        = &crypto_ahash_type,
+				.cra_module      = THIS_MODULE,
+				.cra_init        = nss_cryptoapi_ahash_cra_init,
+				.cra_exit        = nss_cryptoapi_ahash_cra_exit,
+			},
+		},
+	},
+	{
+		.init   = nss_cryptoapi_ahash_init,
+		.update = nss_cryptoapi_ahash_update,
+		.final  = nss_cryptoapi_ahash_final,
+		.export = nss_cryptoapi_ahash_export,
+		.import = nss_cryptoapi_ahash_import,
+		.digest = nss_cryptoapi_ahash_digest,
+		.setkey = nss_cryptoapi_ahash_setkey,
+		.halg   = {
+			.digestsize = SHA256_DIGEST_SIZE,
+			.statesize  = sizeof(struct sha256_state),
+			.base       = {
+				.cra_name        = "hmac(sha256)",
+				.cra_driver_name = "nss-hmac-sha256",
+				.cra_priority    = 1000,
+				.cra_flags       = CRYPTO_ALG_TYPE_AHASH | CRYPTO_ALG_ASYNC,
+				.cra_blocksize   = SHA256_BLOCK_SIZE,
+				.cra_ctxsize     = sizeof(struct nss_cryptoapi_ctx),
+				.cra_alignmask   = 0,
+				.cra_type        = &crypto_ahash_type,
+				.cra_module      = THIS_MODULE,
+				.cra_init        = nss_cryptoapi_ahash_cra_init,
+				.cra_exit        = nss_cryptoapi_ahash_cra_exit,
+			},
+		},
+	},
+};
+
+/*
  * nss_cryptoapi_cra_name2info()
  *     Lookup the associated algorithm in NSS for the given transformation
  */
@@ -471,6 +650,9 @@ struct nss_cryptoapi_algo_info *nss_cryptoapi_cra_name2info(const char *cra_name
 			continue;
 
 		if (info->cipher_keylen == (keylen - info->nonce))
+			return info;
+
+		if (info->auth_keylen == keylen)
 			return info;
 	}
 
@@ -517,7 +699,8 @@ int nss_cryptoapi_status2error(struct nss_cryptoapi_ctx *ctx, uint8_t status)
  * nss_cryptoapi_transform()
  * 	Transform routine for encryption and decryption operations.
  */
-int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_info *info, void *app_data)
+int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_info *info, void *app_data,
+				bool ahash)
 {
 	struct nss_crypto_hdr *ch;
 	uint8_t *iv_addr;
@@ -526,7 +709,7 @@ int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_
 	/*
 	 * Allocate crypto hdr
 	 */
-	ch = nss_crypto_hdr_alloc(ctx->user, ctx->sid, info->nsegs, info->iv_size);
+	ch = nss_crypto_hdr_alloc(ctx->user, ctx->sid, info->nsegs, info->iv_size, info->hmac_len, ahash);
 	if (!ch) {
 		ctx->stats.failed_nomem++;
 		return -ENOMEM;
@@ -539,7 +722,6 @@ int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_
 	 */
 	nss_crypto_hdr_set_skip(ch, info->skip);
 	nss_crypto_hdr_set_op(ch, info->op_dir);
-	nss_crypto_hdr_set_hmac_len(ch, info->hmac_len);
 
 	/*
 	 * Check if the last segment needs a reduction in length
@@ -549,21 +731,22 @@ int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_
 	 * make the HW produce the hash outside of the designated
 	 * location. In order to avoid this we reduce the length by the
 	 * amount mentioned in the hmac_len. This allows the production
-	 * of HMAC inside the packet length.
+	 * of HMAC inside the packet length. Restore the length after
+	 * mapping is done.
 	 */
-	if (info->last_sg)
-		info->last_sg->length -= info->hmac_len;
+	info->last_sg->length -= info->ahash_skip;
+	if (unlikely(ahash)) {
+		nss_crypto_hdr_map_sglist_ahash(ch, info->first_sg);
+		info->last_sg->length += info->ahash_skip;
 
-	/*
-	 * Populate the sg lists in crypto hdr
-	 */
+		/*
+		 * Skip IV since this is ahash
+		 */
+		goto skip_iv;
+	}
+
 	nss_crypto_hdr_map_sglist(ch, info->first_sg);
-
-	/*
-	 * Restore the length for the last_sg
-	 */
-	if (info->last_sg)
-		info->last_sg->length += info->hmac_len;
+	info->last_sg->length += info->ahash_skip;
 
 	/*
 	 * Get IV location and memcpy the IV
@@ -586,7 +769,7 @@ int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_
 		break;
 	}
 
-
+skip_iv:
 	/*
 	 * Send the buffer to CORE layer for processing
 	 */
@@ -729,6 +912,7 @@ void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
 {
 	struct crypto_alg *ablk = cryptoapi_ablkcipher_algs;
 	struct aead_alg *aead = cryptoapi_aead_algs;
+	struct ahash_alg *ahash = cryptoapi_ahash_algs;
 	struct nss_cryptoapi *sc = app_data;
 	int i;
 
@@ -748,6 +932,13 @@ void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
 		}
 	}
 
+	for (i = 0; i < ARRAY_SIZE(cryptoapi_ahash_algs); i++, ahash++) {
+		if (crypto_register_ahash(ahash)) {
+			nss_cfi_err("%p: AHASH registration failed(%s)\n", sc, ahash->halg.base.cra_name);
+			ahash->halg.base.cra_flags = 0;
+		}
+	}
+
 	/*
 	 * Initialize debugfs for cryptoapi.
 	 */
@@ -762,6 +953,7 @@ void nss_cryptoapi_detach_user(void *app_data, struct nss_crypto_user *user)
 {
 	struct crypto_alg *ablk = cryptoapi_ablkcipher_algs;
 	struct aead_alg *aead = cryptoapi_aead_algs;
+	struct ahash_alg *ahash = cryptoapi_ahash_algs;
 	struct nss_cryptoapi *sc = app_data;
 	int i;
 
@@ -781,6 +973,14 @@ void nss_cryptoapi_detach_user(void *app_data, struct nss_crypto_user *user)
 
 		crypto_unregister_aead(aead);
 		nss_cfi_info("%p: AEAD unregister succeeded, algo: %s\n", sc, aead->base.cra_name);
+	}
+
+	for (i = 0; i < ARRAY_SIZE(cryptoapi_ahash_algs); i++, ahash++) {
+		if (!ahash->halg.base.cra_flags)
+			continue;
+
+		crypto_unregister_ahash(ahash);
+		nss_cfi_info("%p: AHASH unregister succeeded, algo: %s\n", sc, ahash->halg.base.cra_name);
 	}
 
 	/*

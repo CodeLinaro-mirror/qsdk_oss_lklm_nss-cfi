@@ -138,11 +138,11 @@ struct nss_cfi_ipsec_sa sa_tbl[NSS_CRYPTO_MAX_IDXS];		/* per crypto session tabl
 static int32_t nss_cfi_ipsec_get_iv_len(enum nss_crypto_cmn_algo algo)
 {
 	switch (algo) {
-	case NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA1_HMAC:
-	case NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA1_HMAC:
+	case NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA160_HMAC:
+	case NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA160_HMAC:
 		return AES_BLOCK_SIZE;
 
-	case NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA1_HMAC:
+	case NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA160_HMAC:
 		return DES_BLOCK_SIZE;
 
 	case NSS_CRYPTO_CMN_ALGO_NULL:

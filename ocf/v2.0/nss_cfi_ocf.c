@@ -62,7 +62,7 @@ static struct nss_cfi_crypto_info gbl_crypto_info[NSS_CRYPTO_MAX_IDXS];
  * slot in the array to accommodate all algos. Slot 0 will be empty and unused.
  */
 static struct nss_cfi_ocf_algo_map cfi_algo[NSS_CRYPTO_CMN_ALGO_MAX] = {
-	[NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA1_HMAC] =	{
+	[NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA160_HMAC] =	{
 								{CRYPTO_AES_CBC, CRYPTO_SHA1_HMAC},
 								AES_KEYSIZE_128,
 								AES_BLOCK_SIZE,
@@ -70,7 +70,7 @@ static struct nss_cfi_ocf_algo_map cfi_algo[NSS_CRYPTO_CMN_ALGO_MAX] = {
 								SHA1_DIGEST_SIZE,
 								1,
 			   				},
-	[NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA1_HMAC] =	{
+	[NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA160_HMAC] =	{
 								{CRYPTO_AES_CBC, CRYPTO_SHA1_HMAC},
 								AES_KEYSIZE_256,
 								AES_BLOCK_SIZE,
@@ -78,7 +78,7 @@ static struct nss_cfi_ocf_algo_map cfi_algo[NSS_CRYPTO_CMN_ALGO_MAX] = {
 								SHA1_DIGEST_SIZE,
 								1,
 							},
-	[NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA1_HMAC] = 	{
+	[NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA160_HMAC] =	{
 								{CRYPTO_3DES_CBC, CRYPTO_SHA1_HMAC},
 								DES3_EDE_KEY_SIZE,
 								DES_BLOCK_SIZE,
@@ -86,7 +86,7 @@ static struct nss_cfi_ocf_algo_map cfi_algo[NSS_CRYPTO_CMN_ALGO_MAX] = {
 								SHA1_DIGEST_SIZE,
 								1,
 							},
-	[NSS_CRYPTO_CMN_ALGO_3DES_CBC] = 		{
+	[NSS_CRYPTO_CMN_ALGO_3DES_CBC] =		{
 								{CRYPTO_3DES_CBC, 0},
 								DES3_EDE_KEY_SIZE,
 								DES_BLOCK_SIZE,
@@ -110,7 +110,7 @@ static struct nss_cfi_ocf_algo_map cfi_algo[NSS_CRYPTO_CMN_ALGO_MAX] = {
 								0,
 								1,
 							},
-	[NSS_CRYPTO_CMN_ALGO_SHA1_HMAC] = 		{
+	[NSS_CRYPTO_CMN_ALGO_SHA160_HMAC] =		{
 								{CRYPTO_SHA1_HMAC, 0},
 								0,
 								0,
@@ -181,8 +181,8 @@ enum nss_crypto_cmn_algo nss_cfi_ocf_cri2algo(struct cryptoini *cri)
 		cfi_algo_next = cfi_algo[algo].algo[1];
 
 		switch (algo) {
-		case NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA1_HMAC:
-		case NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA1_HMAC:
+		case NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA160_HMAC:
+		case NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA160_HMAC:
 			cri_algo_next = cri->cri_next->cri_alg;
 
 			if ((cri_algo_first != cfi_algo_first) && (cri_algo_first != cfi_algo_next))
@@ -192,11 +192,11 @@ enum nss_crypto_cmn_algo nss_cfi_ocf_cri2algo(struct cryptoini *cri)
 				break;
 
 			if (NSS_CFI_OCF_BITS2BYTES(cri->cri_klen) == AES_KEYSIZE_128)
-				return NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA1_HMAC;
+				return NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA160_HMAC;
 			else if (NSS_CFI_OCF_BITS2BYTES(cri->cri_klen) == AES_KEYSIZE_256)
-				return NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA1_HMAC;
+				return NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA160_HMAC;
 
-		case NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA1_HMAC:
+		case NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA160_HMAC:
 			cri_algo_next = cri->cri_next->cri_alg;
 
 			if ((cri_algo_first != cfi_algo_first) && (cri_algo_first != cfi_algo_next))
@@ -210,7 +210,7 @@ enum nss_crypto_cmn_algo nss_cfi_ocf_cri2algo(struct cryptoini *cri)
 		case NSS_CRYPTO_CMN_ALGO_AES128_CBC:
 		case NSS_CRYPTO_CMN_ALGO_AES256_CBC:
 		case NSS_CRYPTO_CMN_ALGO_3DES_CBC:
-		case NSS_CRYPTO_CMN_ALGO_SHA1_HMAC:
+		case NSS_CRYPTO_CMN_ALGO_SHA160_HMAC:
 			if (cri_algo_first != cfi_algo_first)
 				break;
 
@@ -490,7 +490,7 @@ static int nss_cfi_ocf_process(device_t dev, struct cryptop *crp, int hint)
 	/*
 	 *  Allocate nss_crypto_buffer
 	 */
-	ch = nss_crypto_hdr_alloc(sc->crypto, sid, 1, ivsize);
+	ch = nss_crypto_hdr_alloc(sc->crypto, sid, 1, ivsize, hash_len, false);
 	if (!ch) {
 		nss_cfi_dbg("%p: not able to allocate crypto buffer\n");
 		goto crypto_done;
@@ -529,7 +529,7 @@ static int nss_cfi_ocf_process(device_t dev, struct cryptop *crp, int hint)
 		gbl_crypto_info[ch->index].hash_len = hash_len;
 	}
 
-	nss_crypto_hdr_set_hmac_len(ch, hash_len);
+	ch->hmac_len = hash_len;
 
 	esp_offset = skb->len - (hash_len + cipher_len + ivsize + ESP_HDR_LEN);
 

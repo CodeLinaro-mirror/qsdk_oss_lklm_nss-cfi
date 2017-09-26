@@ -301,9 +301,9 @@ int nss_cryptoapi_ablk_encrypt(struct ablkcipher_request *req)
 	}
 
 	info.last_sg = cur;
-	info.hmac_len = tot_len - req->nbytes;
+	info.ahash_skip = tot_len - req->nbytes;
 
-	return nss_cryptoapi_transform(ctx, &info, (void *)req);
+	return nss_cryptoapi_transform(ctx, &info, (void *)req, false);
 }
 
 /*
@@ -390,8 +390,8 @@ int nss_cryptoapi_ablk_decrypt(struct ablkcipher_request *req)
 			break;
 	}
 
-	info.hmac_len = tot_len - req->nbytes;
+	info.ahash_skip = tot_len - req->nbytes;
 	info.last_sg = cur;
 
-	return nss_cryptoapi_transform(ctx, &info, (void *)req);
+	return nss_cryptoapi_transform(ctx, &info, (void *)req, false);
 }

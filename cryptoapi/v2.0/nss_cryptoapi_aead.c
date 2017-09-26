@@ -309,11 +309,12 @@ int nss_cryptoapi_aead_encrypt(struct aead_request *req)
 	info.cb = nss_cryptoapi_aead_done;
 	info.iv_size = ctx->iv_size;
 	info.hmac_len = crypto_aead_authsize(aead);
+	info.ahash_skip = crypto_aead_authsize(aead);
 	info.first_sg = req->src;
 	info.last_sg = sg_last(req->src, info.nsegs);
 	info.skip = req->assoclen + crypto_aead_ivsize(aead);
 
-	return nss_cryptoapi_transform(ctx, &info, (void *)req);
+	return nss_cryptoapi_transform(ctx, &info, (void *)req, false);
 }
 
 /*
@@ -373,7 +374,9 @@ int nss_cryptoapi_aead_decrypt(struct aead_request *req)
 	info.cb = nss_cryptoapi_aead_done;
 	info.iv_size = ctx->iv_size;
 	info.hmac_len = crypto_aead_authsize(aead);
+	info.ahash_skip = 0;
+	info.last_sg = sg_last(req->src, info.nsegs);
 	info.skip = req->assoclen + crypto_aead_ivsize(aead);
 
-	return nss_cryptoapi_transform(ctx, &info, (void *)req);
+	return nss_cryptoapi_transform(ctx, &info, (void *)req, false);
 }

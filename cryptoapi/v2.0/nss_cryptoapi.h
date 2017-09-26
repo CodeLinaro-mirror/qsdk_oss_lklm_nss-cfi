@@ -28,6 +28,7 @@
 #define NSS_CRYPTOAPI_DEBUGFS_MAX_CTX_ENTRY 5
 #define NSS_CRYPTOAPI_DEBUGFS_MAX_STATS_ENTRY 6
 #define NSS_CRYPTOAPI_MAGIC 0x7FED
+#define NSS_CRYPTOAPI_AHASH_MAGIC 0x7FEF
 #define NSS_CRYPTOAPI_HDR_POOL_SZ 1024
 #define NSS_CRYPTOAPI_DEFAULT_HDR_SZ 512
 #define NSS_CRYPTOAPI_TIMEOUT 10 /* seconds */
@@ -64,6 +65,26 @@ struct nss_cryptoapi {
 	struct nss_crypto_user *user;			/* Crypto user handle */
 	struct dentry *root;				/* Root debugfs entry */
 	struct nss_cryptoapi_algo_info *algo_info;	/* algorithm table */
+};
+
+/*
+ * Ahash algorithm req specific context
+ */
+struct nss_cryptoapi_req_ctx {
+	uint64_t msg_count;				/* Message count for this context */
+	union {
+		struct sha1_state sha1;
+		struct sha256_state sha256;
+	} state;					/* States for SHA modes */
+
+	enum nss_cryptoapi_auth_mode auth_mode;		/* Auth mode */
+	struct nss_cryptoapi_algo_info *info;		/* Algorithm specific info */
+
+	uint32_t buf_count;				/* Buffer input count */
+	uint32_t diglen;				/* Digest length */
+	uint8_t digest[SHA256_DIGEST_SIZE];		/* Storage for resultant digest */
+
+	uint16_t magic;					/* Magic */
 };
 
 /*
@@ -120,9 +141,10 @@ struct nss_cryptoapi_info {
 	struct scatterlist *last_sg;		/* Last SG in the list */
 	size_t nsegs;				/* No. of segments in the list */
 	void *iv;				/* IV to use for transform */
-	uint16_t skip;				/* Cipher skip */
-	uint16_t iv_size;			/* IV size */
-	uint16_t hmac_len;			/* HMAC length */
+	uint8_t skip;				/* Cipher skip */
+	uint8_t iv_size;			/* IV size */
+	uint8_t hmac_len;			/* HMAC length */
+	uint8_t ahash_skip;			/* AHASH data length */
 	enum nss_crypto_op_dir op_dir;		/* Operation direction */
 };
 
@@ -171,7 +193,7 @@ static inline void nss_cryptoapi_clear_magic(struct nss_cryptoapi_ctx *ctx)
 extern struct nss_cryptoapi g_cryptoapi;
 extern int nss_cryptoapi_status2error(struct nss_cryptoapi_ctx *ctx, uint8_t status);
 extern struct nss_cryptoapi_algo_info *nss_cryptoapi_cra_name2info(const char *cra_name, uint16_t keylen);
-extern int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_info *info, void *app_data);
+extern int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_info *info, void *app_data, bool ahash);
 /*
  * Debug fs
  */
@@ -195,4 +217,17 @@ extern void nss_cryptoapi_ablkcipher_exit(struct crypto_tfm *tfm);
 extern int nss_cryptoapi_ablk_setkey(struct crypto_ablkcipher *cipher, const u8 *key, unsigned int len);
 extern int nss_cryptoapi_ablk_encrypt(struct ablkcipher_request *req);
 extern int nss_cryptoapi_ablk_decrypt(struct ablkcipher_request *req);
+
+/*
+ * AHASH
+ */
+extern int nss_cryptoapi_ahash_cra_init(struct crypto_tfm *tfm);
+extern void nss_cryptoapi_ahash_cra_exit(struct crypto_tfm *tfm);
+extern int nss_cryptoapi_ahash_setkey(struct crypto_ahash *ahash, const u8 *key, unsigned int keylen);
+extern int nss_cryptoapi_ahash_init(struct ahash_request *req);
+extern int nss_cryptoapi_ahash_update(struct ahash_request *req);
+extern int nss_cryptoapi_ahash_final(struct ahash_request *req);
+extern int nss_cryptoapi_ahash_digest(struct ahash_request *req);
+extern int nss_cryptoapi_ahash_export(struct ahash_request *req, void *out);
+extern int nss_cryptoapi_ahash_import(struct ahash_request *req, const void *in);
 #endif /* !__NSS_CRYPTOAPI_H */
