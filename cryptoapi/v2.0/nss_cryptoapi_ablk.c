@@ -111,7 +111,7 @@ void nss_cryptoapi_ablkcipher_exit(struct crypto_tfm *tfm)
 	 * When fallback_req is set, it means that fallback tfm was used
 	 * we didn't create any sessions.
 	 */
-	if (!ctx->fallback_req)
+	if (ctx->fallback_req)
 		return;
 
 	nss_crypto_session_free(ctx->user, ctx->sid);
