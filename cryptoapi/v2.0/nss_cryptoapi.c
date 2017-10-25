@@ -65,6 +65,10 @@ bool enable_ahash = true;
 module_param(enable_ahash, bool, S_IRUGO);
 MODULE_PARM_DESC(enable_ahash, "Enable Cryptoapi AHASH support");
 
+static int free_timeout = NSS_CRYPTOAPI_TIMEOUT;
+module_param(free_timeout, int, 0644);
+MODULE_PARM_DESC(free_timeout, "Max Timeout for Crypto session deallocation in seconds");
+
 struct nss_cryptoapi_algo_info g_algo_info[] = {
 	/*
 	 * Aynsc Block ciphers
@@ -1225,7 +1229,6 @@ struct nss_cryptoapi g_cryptoapi = {
 		.detach = nss_cryptoapi_detach_user,
 		.hdr_pool_sz = NSS_CRYPTOAPI_HDR_POOL_SZ,
 		.default_hdr_sz = NSS_CRYPTOAPI_DEFAULT_HDR_SZ,
-		.timeout_ticks = NSS_CRYPTOAPI_TIMEOUT
 	},
 
 	.algo_info = g_algo_info,
@@ -1238,6 +1241,11 @@ struct nss_cryptoapi g_cryptoapi = {
 int nss_cryptoapi_init(void)
 {
 	nss_cfi_info("module loaded %s\n", NSS_CFI_BUILD_ID);
+
+	/*
+	 * Fill context free timeout
+	 */
+	g_cryptoapi.ctx.timeout_ticks = msecs_to_jiffies(free_timeout * MSEC_PER_SEC);
 
 	g_cryptoapi.user = nss_crypto_register_user(&g_cryptoapi.ctx, &g_cryptoapi);
 	if (!g_cryptoapi.user) {
