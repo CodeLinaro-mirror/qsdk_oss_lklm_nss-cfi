@@ -49,7 +49,7 @@
 #include <nss_api_if.h>
 #include <nss_crypto_if.h>
 #include <nss_cfi_if.h>
-#include "nss_cryptoapi.h"
+#include "nss_cryptoapi_private.h"
 
 struct nss_cryptoapi gbl_ctx;
 

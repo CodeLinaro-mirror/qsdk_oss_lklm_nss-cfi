@@ -50,7 +50,7 @@
 #include <nss_crypto_api.h>
 #include <nss_crypto_hdr.h>
 #include <nss_crypto_defines.h>
-#include "nss_cryptoapi.h"
+#include "nss_cryptoapi_private.h"
 
 extern struct nss_cryptoapi g_cryptoapi;
 

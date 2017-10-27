@@ -16,12 +16,12 @@
  *
  */
 
-#ifndef __NSS_CRYPTOAPI_H
-#define __NSS_CRYPTOAPI_H
+#ifndef __NSS_CRYPTOAPI_PRIVATE_H
+#define __NSS_CRYPTOAPI_PRIVATE_H
 
 /**
  * nss_cryptoapi.h
- * 	Cryptoapi (Linux Crypto API framework) specific nss cfi header file
+ *	Cryptoapi (Linux Crypto API framework) specific nss cfi header file
  */
 
 #define NSS_CRYPTOAPI_DEBUGFS_MAX_NAME 64
@@ -32,7 +32,7 @@
 #define NSS_CRYPTOAPI_HDR_POOL_SZ 1024
 #define NSS_CRYPTOAPI_DEFAULT_HDR_SZ 512
 #define NSS_CRYPTOAPI_TIMEOUT 10 /* seconds */
-#define NSS_CRYPTOAPI_MAX_IV AES_BLOCK_SIZE/sizeof(uint32_t)
+#define NSS_CRYPTOAPI_MAX_IV (AES_BLOCK_SIZE/sizeof(uint32_t))
 
 /*
  * Cipher mode
@@ -135,7 +135,7 @@ struct nss_cryptoapi_info {
 	enum nss_crypto_op_dir op_dir;		/* Operation direction */
 };
 
-typedef void (*nss_cryptoapi_aead_tx_proc_method_t )(struct nss_cryptoapi_ctx *ctx,
+typedef void (*nss_cryptoapi_aead_tx_proc_method_t)(struct nss_cryptoapi_ctx *ctx,
 		struct aead_request *req, struct nss_cryptoapi_info *info, bool encrypt);
 
 /*
@@ -156,7 +156,7 @@ struct nss_cryptoapi_algo_info {
 
 /*
  * nss_cryptoapi_verify_magic()
- * 	verify magic
+ *	verify magic
  */
 static inline void nss_cryptoapi_verify_magic(struct nss_cryptoapi_ctx *ctx)
 {
@@ -165,7 +165,7 @@ static inline void nss_cryptoapi_verify_magic(struct nss_cryptoapi_ctx *ctx)
 
 /*
  * nss_cryptoapi_set_magic()
- * 	set magic
+ *	set magic
  */
 static inline void nss_cryptoapi_set_magic(struct nss_cryptoapi_ctx *ctx)
 {
@@ -174,7 +174,7 @@ static inline void nss_cryptoapi_set_magic(struct nss_cryptoapi_ctx *ctx)
 
 /*
  * nss_cryptoapi_clear_magic()
- * 	clear magic
+ *	clear magic
  */
 static inline void nss_cryptoapi_clear_magic(struct nss_cryptoapi_ctx *ctx)
 {
@@ -240,4 +240,4 @@ extern int nss_cryptoapi_ahash_final(struct ahash_request *req);
 extern int nss_cryptoapi_ahash_digest(struct ahash_request *req);
 extern int nss_cryptoapi_ahash_export(struct ahash_request *req, void *out);
 extern int nss_cryptoapi_ahash_import(struct ahash_request *req, const void *in);
-#endif /* !__NSS_CRYPTOAPI_H */
+#endif /* !__NSS_CRYPTOAPI_PRIVATE_H */
