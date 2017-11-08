@@ -97,7 +97,7 @@ struct nss_cryptoapi_stats {
 	uint64_t failed_nomem;				/* Packets failing due to no memory */
 	uint64_t failed_req;				/* Packets failing due incorrect request */
 	uint64_t failed_align;				/* Packets failing alignment checks */
-	uint64_t error[NSS_CRYPTO_RESP_ERROR_MAX];	/* Other packet response errors */
+	uint64_t error[NSS_CRYPTO_CMN_RESP_ERROR_MAX];	/* Other packet response errors */
 };
 
 /*
