@@ -1150,6 +1150,20 @@ void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
 
 	nss_cfi_info("%p: Registering algorithms with Linux\n", sc);
 
+	BUG_ON(!user);
+
+	/*
+	 * It is possible that the attach gets called immediately by the
+	 * crypto driver. This happens if NSS notifies the Crypto driver
+	 * that it is ready for use. In that case the crypto_register_user
+	 * would immediately call attach before returning the control to
+	 * module_init. Thus we can enter a situation where the user
+	 * is not loaded.
+	 */
+	if (!g_cryptoapi.user) {
+		      g_cryptoapi.user = user;
+	}
+
 	for (i = 0; enable_ablk && (i < ARRAY_SIZE(cryptoapi_ablkcipher_algs)); i++, ablk++) {
 		if (crypto_register_alg(ablk)) {
 			nss_cfi_err("%p: ABLK registration failed(%s)\n", sc, ablk->cra_name);
