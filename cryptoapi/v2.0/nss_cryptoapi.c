@@ -1184,11 +1184,6 @@ void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
 			ahash->halg.base.cra_flags = 0;
 		}
 	}
-
-	/*
-	 * Initialize debugfs for cryptoapi.
-	 */
-	sc->root = debugfs_create_dir("qca-nss-cryptoapi", NULL);
 }
 
 /*
@@ -1228,12 +1223,6 @@ void nss_cryptoapi_detach_user(void *app_data, struct nss_crypto_user *user)
 		crypto_unregister_ahash(ahash);
 		nss_cfi_info("%p: AHASH unregister succeeded, algo: %s\n", sc, ahash->halg.base.cra_name);
 	}
-
-	/*
-	 * cleanup cryptoapi debugfs.
-	 */
-	debugfs_remove_recursive(sc->root);
-
 }
 
 struct nss_cryptoapi g_cryptoapi = {
@@ -1257,6 +1246,11 @@ int nss_cryptoapi_init(void)
 	nss_cfi_info("module loaded %s\n", NSS_CFI_BUILD_ID);
 
 	/*
+	 * Create debugfs root directory for cryptoapi.
+	 */
+	g_cryptoapi.root = debugfs_create_dir("qca-nss-cryptoapi", NULL);
+
+	/*
 	 * Fill context free timeout
 	 */
 	g_cryptoapi.ctx.timeout_ticks = msecs_to_jiffies(free_timeout * MSEC_PER_SEC);
@@ -1264,6 +1258,7 @@ int nss_cryptoapi_init(void)
 	g_cryptoapi.user = nss_crypto_register_user(&g_cryptoapi.ctx, &g_cryptoapi);
 	if (!g_cryptoapi.user) {
 		nss_cfi_err("%p: Failed to register nss_cryptoapi\n", &g_cryptoapi);
+		debugfs_remove_recursive(g_cryptoapi.root);
 		return -ENODEV;
 	}
 
@@ -1278,6 +1273,12 @@ void nss_cryptoapi_exit(void)
 {
 	if (g_cryptoapi.user)
 		nss_crypto_unregister_user(g_cryptoapi.user);
+
+	/*
+	 * Cleanup cryptoapi debugfs.
+	 */
+	if (g_cryptoapi.root)
+		debugfs_remove_recursive(g_cryptoapi.root);
 
 	nss_cfi_info("module unloaded %s\n", NSS_CFI_BUILD_ID);
 }
