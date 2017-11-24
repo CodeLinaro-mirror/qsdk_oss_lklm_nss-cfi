@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -42,7 +42,7 @@ enum nss_cryptoapi_cipher_mode {
 	NSS_CRYPTOAPI_CIPHER_MODE_ECB,			/* Electronic Code Block */
 	NSS_CRYPTOAPI_CIPHER_MODE_CBC,			/* Cipher Block Chaining */
 	NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,		/* Counter Mode */
-	NSS_CRYPTOAPI_CIPHER_MODE_GCM,			/* Galois Counter Mode */
+	NSS_CRYPTOAPI_CIPHER_MODE_GCM_RFC4106,			/* Galois Counter Mode */
 	NSS_CRYPTOAPI_CIPHER_MODE_MAX
 };
 
@@ -130,6 +130,7 @@ struct nss_cryptoapi_info {
 	size_t nsegs;				/* No. of segments in the list */
 	void *iv;				/* IV to use for transform */
 	uint8_t skip;				/* Cipher skip */
+	uint8_t auth;				/* auth len */
 	uint8_t iv_size;			/* IV size */
 	uint8_t hmac_len;			/* HMAC length */
 	uint8_t ahash_skip;			/* AHASH data length */
@@ -210,6 +211,7 @@ extern void nss_cryptoapi_add_ctx2debugfs(struct nss_cryptoapi_ctx *ctx);
 extern int nss_cryptoapi_aead_init(struct crypto_aead *aead);
 extern void nss_cryptoapi_aead_exit(struct crypto_aead *aead);
 extern int nss_cryptoapi_aead_setkey(struct crypto_aead *tfm, const u8 *key, unsigned int keylen);
+extern int nss_cryptoapi_aead_setkey_noauth(struct crypto_aead *tfm, const u8 *key, unsigned int keylen);
 extern int nss_cryptoapi_aead_setauthsize(struct crypto_aead *authenc, unsigned int authsize);
 extern int nss_cryptoapi_aead_encrypt(struct aead_request *req);
 extern int nss_cryptoapi_aead_decrypt(struct aead_request *req);

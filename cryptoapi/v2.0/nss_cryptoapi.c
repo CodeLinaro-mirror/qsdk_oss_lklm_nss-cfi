@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -39,6 +39,7 @@
 #include <crypto/des.h>
 #include <crypto/sha.h>
 #include <crypto/hash.h>
+#include <crypto/ghash.h>
 #include <crypto/algapi.h>
 #include <crypto/aead.h>
 #include <crypto/authenc.h>
@@ -390,7 +391,61 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
 		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
-	}
+	},
+	{
+		.cra_name = "rfc4106(gcm(aes))",
+		.cipher_keylen = AES_KEYSIZE_128,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES128_GCM_GMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_GCM_RFC4106,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_GMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
+		.nonce = CTR_RFC3686_NONCE_SIZE,
+	},
+	{
+		.cra_name = "rfc4106(gcm(aes))",
+		.cipher_keylen = AES_KEYSIZE_192,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES192_GCM_GMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_GCM_RFC4106,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_GMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
+		.nonce = CTR_RFC3686_NONCE_SIZE,
+	},
+	{
+		.cra_name = "rfc4106(gcm(aes))",
+		.cipher_keylen = AES_KEYSIZE_256,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES256_GCM_GMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_GCM_RFC4106,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_GMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
+		.nonce = CTR_RFC3686_NONCE_SIZE,
+	},
+	{
+		.cra_name = "seqiv(rfc4106(gcm(aes)))",
+		.cipher_keylen = AES_KEYSIZE_128,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES128_GCM_GMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_GCM_RFC4106,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_GMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_seqiv_tx_proc,
+		.nonce = CTR_RFC3686_NONCE_SIZE,
+	},
+	{
+		.cra_name = "seqiv(rfc4106(gcm(aes)))",
+		.cipher_keylen = AES_KEYSIZE_192,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES192_GCM_GMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_GCM_RFC4106,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_GMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_seqiv_tx_proc,
+		.nonce = CTR_RFC3686_NONCE_SIZE,
+	},
+	{
+		.cra_name = "seqiv(rfc4106(gcm(aes)))",
+		.cipher_keylen = AES_KEYSIZE_256,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES256_GCM_GMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_GCM_RFC4106,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_GMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_seqiv_tx_proc,
+		.nonce = CTR_RFC3686_NONCE_SIZE,
+	},
 };
 
 /*
@@ -621,6 +676,52 @@ struct aead_alg cryptoapi_aead_algs[] = {
 		.ivsize = DES3_EDE_BLOCK_SIZE,
 		.maxauthsize = SHA256_DIGEST_SIZE,
 		.setkey = nss_cryptoapi_aead_setkey,
+		.setauthsize = nss_cryptoapi_aead_setauthsize,
+		.encrypt = nss_cryptoapi_aead_encrypt,
+		.decrypt = nss_cryptoapi_aead_decrypt,
+	},
+	{	/*
+		 * RFC4106, GCM
+		 */
+		.base = {
+			.cra_name = "rfc4106(gcm(aes))",
+			.cra_driver_name = "nss-rfc4106-gcm",
+			.cra_priority = 10000,
+			.cra_flags = CRYPTO_ALG_ASYNC,
+			.cra_blocksize = AES_BLOCK_SIZE,
+			.cra_ctxsize = sizeof(struct nss_cryptoapi_ctx),
+			.cra_alignmask = 0,
+			.cra_module = THIS_MODULE,
+		},
+
+		.init = nss_cryptoapi_aead_init,
+		.exit = nss_cryptoapi_aead_exit,
+		.ivsize = 8,
+		.maxauthsize = GHASH_DIGEST_SIZE,
+		.setkey = nss_cryptoapi_aead_setkey_noauth,
+		.setauthsize = nss_cryptoapi_aead_setauthsize,
+		.encrypt = nss_cryptoapi_aead_encrypt,
+		.decrypt = nss_cryptoapi_aead_decrypt,
+	},
+	{	/*
+		 * RFC4106, GCM
+		 */
+		.base = {
+			.cra_name = "seqiv(rfc4106(gcm(aes)))",
+			.cra_driver_name = "nss-rfc4106-gcm",
+			.cra_priority = 10000,
+			.cra_flags = CRYPTO_ALG_ASYNC,
+			.cra_blocksize = AES_BLOCK_SIZE,
+			.cra_ctxsize = sizeof(struct nss_cryptoapi_ctx),
+			.cra_alignmask = 0,
+			.cra_module = THIS_MODULE,
+		},
+
+		.init = nss_cryptoapi_aead_init,
+		.exit = nss_cryptoapi_aead_exit,
+		.ivsize = 8,
+		.maxauthsize = GHASH_DIGEST_SIZE,
+		.setkey = nss_cryptoapi_aead_setkey_noauth,
 		.setauthsize = nss_cryptoapi_aead_setauthsize,
 		.encrypt = nss_cryptoapi_aead_encrypt,
 		.decrypt = nss_cryptoapi_aead_decrypt,
@@ -956,6 +1057,12 @@ int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_
 	nss_crypto_hdr_set_op(ch, info->op_dir);
 
 	/*
+	 * For GCM, overwrite auth only len
+	 */
+	if (ctx->info->cipher_mode == NSS_CRYPTOAPI_CIPHER_MODE_GCM_RFC4106)
+		nss_crypto_hdr_set_auth(ch, info->auth);
+
+	/*
 	 * Check if the last segment needs a reduction in length
 	 * This is essential as the map API will map the entire length
 	 * present in the SGLIST. During encryption process the length
@@ -991,6 +1098,7 @@ int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_
 		break;
 
 	case NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686:
+	case NSS_CRYPTOAPI_CIPHER_MODE_GCM_RFC4106:
 		((uint32_t *)iv_addr)[0] = ctx->ctx_iv[0];
 		((uint32_t *)iv_addr)[1] = ((uint32_t *)info->iv)[0];
 		((uint32_t *)iv_addr)[2] = ((uint32_t *)info->iv)[1];

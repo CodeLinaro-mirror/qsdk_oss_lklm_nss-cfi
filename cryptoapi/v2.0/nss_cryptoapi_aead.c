@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -142,6 +142,56 @@ void nss_cryptoapi_aead_exit(struct crypto_aead *aead)
 }
 
 /*
+ * nss_cryptoapi_aead_setkey_noauth()
+ * 	Cryptoapi setkey routine for aead algorithms with no authentication key.
+ */
+int nss_cryptoapi_aead_setkey_noauth(struct crypto_aead *aead, const u8 *key, unsigned int keylen)
+{
+	struct crypto_tfm *tfm = crypto_aead_tfm(aead);
+	struct nss_cryptoapi_ctx *ctx = crypto_tfm_ctx(tfm);
+	struct nss_crypto_session_data data = {0};
+	int32_t status;
+
+	/*
+	 * Validate magic number - init should be called before setkey
+	 */
+	NSS_CRYPTOAPI_VERIFY_MAGIC(ctx);
+
+	ctx->info = nss_cryptoapi_cra_name2info(crypto_tfm_alg_name(tfm), keylen, 0);
+	if (!ctx->info) {
+		nss_cfi_err("%p: Unable to find algorithm with keylen\n", ctx);
+		crypto_aead_set_flags(aead, CRYPTO_TFM_RES_BAD_KEY_LEN);
+		return -ENOENT;
+	}
+
+	if (ctx->info->algo >= NSS_CRYPTO_CMN_ALGO_MAX)
+		return -ERANGE;
+
+	ctx->iv_size = crypto_aead_ivsize(aead);
+
+	keylen = keylen - ctx->info->nonce;
+	memcpy(ctx->ctx_iv, key + keylen, ctx->info->nonce);
+	ctx->ctx_iv[3] = ntohl(0x1);
+	ctx->iv_size += ctx->info->nonce + sizeof(uint32_t);
+
+	data.algo = ctx->info->algo;
+	data.cipher_key = key;
+	data.auth_key = NULL;
+	data.nonce = key + keylen;
+	data.sec_key = false;
+
+	status = nss_crypto_session_alloc(ctx->user, &data, &ctx->sid);
+	if (status < 0) {
+		nss_cfi_err("%p: Unable to allocate crypto session(%d)\n", ctx, status);
+		crypto_aead_set_flags(aead, CRYPTO_TFM_RES_BAD_FLAGS);
+		return status;
+	}
+
+	nss_cryptoapi_add_ctx2debugfs(ctx);
+	return 0;
+}
+
+/*
  * nss_cryptoapi_aead_setkey()
  * 	Cryptoapi setkey routine for aead (aes/des/sha) algorithms.
  */
@@ -173,6 +223,9 @@ int nss_cryptoapi_aead_setkey(struct crypto_aead *aead, const u8 *key, unsigned 
 		crypto_aead_set_flags(aead, CRYPTO_TFM_RES_BAD_KEY_LEN);
 		return -ENOENT;
 	}
+
+	if (ctx->info->algo >= NSS_CRYPTO_CMN_ALGO_MAX)
+		return -ERANGE;
 
 	ctx->iv_size = crypto_aead_ivsize(aead);
 
@@ -220,9 +273,6 @@ int nss_cryptoapi_aead_setkey(struct crypto_aead *aead, const u8 *key, unsigned 
 	data.cipher_key = keys.enckey;
 	data.auth_key = keys.authkey;
 	data.sec_key = false;
-
-	if (data.algo >= NSS_CRYPTO_CMN_ALGO_MAX)
-		return -ERANGE;
 
 	status = nss_crypto_session_alloc(ctx->user, &data, &ctx->sid);
 	if (status < 0) {
@@ -331,6 +381,12 @@ void nss_cryptoapi_aead_seqiv_tx_proc(struct nss_cryptoapi_ctx *ctx, struct aead
 	info->first_sg = req->src;
 	info->last_sg = sg_last(req->src, info->nsegs);
 	info->skip = req->assoclen + crypto_aead_ivsize(aead);
+
+	/*
+	 * For gcm RFC4106, IV is not part of authentication
+	 */
+	if (ctx->info->cipher_mode == NSS_CRYPTOAPI_CIPHER_MODE_GCM_RFC4106)
+		info->auth = req->assoclen;
 }
 
 /*
@@ -351,6 +407,13 @@ void nss_cryptoapi_aead_tx_proc(struct nss_cryptoapi_ctx *ctx, struct aead_reque
 	info->first_sg = req->src;
 	info->last_sg = sg_last(req->src, info->nsegs);
 	info->skip = req->assoclen;
+
+	/*
+	 * This api is called from tcrypt, for GCM case assoclen include
+	 * IV also, while IV is not part of authentication as per RFC4106
+	 */
+	if (ctx->info->cipher_mode == NSS_CRYPTOAPI_CIPHER_MODE_GCM_RFC4106)
+		info->auth = req->assoclen - crypto_aead_ivsize(aead);
 }
 
 /*
