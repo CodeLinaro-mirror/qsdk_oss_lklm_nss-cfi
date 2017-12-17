@@ -44,11 +44,12 @@
 #include <crypto/aead.h>
 #include <crypto/authenc.h>
 #include <crypto/scatterwalk.h>
+#include <crypto/internal/hash.h>
 
 #include <nss_api_if.h>
 #include <nss_crypto_if.h>
 #include <nss_cfi_if.h>
-#include "nss_cryptoapi.h"
+#include "nss_cryptoapi_private.h"
 
 struct nss_cryptoapi gbl_ctx;
 
@@ -280,6 +281,38 @@ static struct crypto_alg cryptoapi_algs[] = {
 };
 
 /*
+ * AHASH algorithms
+ */
+static struct ahash_alg cryptoapi_ahash_algs[] = {
+	{
+		.init   = nss_cryptoapi_sha1_hmac_init,
+		.update = nss_cryptoapi_sha1_hmac_update,
+		.final  = nss_cryptoapi_sha1_hmac_final,
+		.export = nss_cryptoapi_sha1_hmac_export,
+		.import = nss_cryptoapi_sha1_hmac_import,
+		.digest = nss_cryptoapi_sha1_hmac_digest,
+		.setkey = nss_cryptoapi_sha1_hmac_setkey,
+		.halg   = {
+			.digestsize = SHA1_DIGEST_SIZE,
+			.statesize  = sizeof(struct sha1_state),
+			.base       = {
+				.cra_name        = "hmac(sha1)",
+				.cra_driver_name = "nss-hmac-sha1",
+				.cra_priority    = 300,
+				.cra_flags       = CRYPTO_ALG_TYPE_AHASH | CRYPTO_ALG_ASYNC | CRYPTO_ALG_NOSUPP_SG,
+				.cra_blocksize   = SHA1_BLOCK_SIZE,
+				.cra_ctxsize     = sizeof(struct nss_cryptoapi_ctx),
+				.cra_alignmask   = 0,
+				.cra_type        = &crypto_ahash_type,
+				.cra_module      = THIS_MODULE,
+				.cra_init        = nss_cryptoapi_ahash_cra_init,
+				.cra_exit        = nss_cryptoapi_ahash_cra_exit,
+			},
+		},
+	},
+};
+
+/*
  * nss_cryptoapi_register()
  * 	register crypto core with the cryptoapi CFI
  */
@@ -301,6 +334,18 @@ static nss_crypto_user_ctx_t nss_cryptoapi_register(nss_crypto_handle_t crypto)
 			continue;
 		}
 		nss_cfi_info("Aead registeration succeed, algo: %s\n", cryptoapi_algs[i].cra_name);
+	}
+
+	for (i = 0; i < ARRAY_SIZE(cryptoapi_ahash_algs); i++) {
+
+		rc = crypto_register_ahash(&cryptoapi_ahash_algs[i]);
+		if (rc) {
+			nss_cfi_err("Ahash registeration failed, algo: %s\n",
+				cryptoapi_ahash_algs[i].halg.base.cra_name);
+			continue;
+		}
+		nss_cfi_info("Ahash registeration succeed, algo: %s\n",
+			cryptoapi_ahash_algs[i].halg.base.cra_name);
 	}
 
 	/*
@@ -333,6 +378,16 @@ static void nss_cryptoapi_unregister(nss_crypto_user_ctx_t cfi)
 		nss_cfi_info("Aead unregister succeed, algo: %s\n", cryptoapi_algs[i].cra_name);
 	}
 
+	for (i = 0; i < ARRAY_SIZE(cryptoapi_ahash_algs); i++) {
+		rc = crypto_unregister_ahash(&cryptoapi_ahash_algs[i]);
+		if (rc) {
+			nss_cfi_err("Ahash unregister failed, algo: %s\n",
+				cryptoapi_ahash_algs[i].halg.base.cra_name);
+			continue;
+		}
+		nss_cfi_info("Ahash unregister succeed, algo: %s\n",
+			cryptoapi_ahash_algs[i].halg.base.cra_name);
+}
 	/*
 	 * cleanup cryptoapi debugfs.
 	 */

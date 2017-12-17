@@ -47,7 +47,8 @@
 #include <nss_api_if.h>
 #include <nss_crypto_if.h>
 #include <nss_cfi_if.h>
-#include "nss_cryptoapi.h"
+#include <nss_cryptoapi.h>
+#include "nss_cryptoapi_private.h"
 
 extern struct nss_cryptoapi gbl_ctx;
 
@@ -56,6 +57,25 @@ struct nss_cryptoapi_ablk_info {
 	struct nss_crypto_params *params;
 	nss_crypto_comp_t cb_fn;
 };
+
+/*
+ * nss_cryptoapi_ablk_ctx2session()
+ *	Cryptoapi function to get the session ID for an ablk cipher
+ */
+int nss_cryptoapi_ablk_ctx2session(struct crypto_ablkcipher *ablk, uint32_t *sid)
+{
+	struct crypto_tfm *tfm = crypto_ablkcipher_tfm(ablk);
+	struct nss_cryptoapi_ctx *ctx;
+
+	if (strncmp("nss-", crypto_tfm_alg_driver_name(tfm), 4))
+		return -EINVAL;
+
+	ctx = crypto_ablkcipher_ctx(ablk);
+	*sid = ctx->sid;
+
+	return 0;
+}
+EXPORT_SYMBOL(nss_cryptoapi_ablk_ctx2session);
 
 /*
  * nss_cryptoapi_ablkcipher_init()
@@ -423,7 +443,7 @@ struct nss_crypto_buf *nss_cryptoapi_ablk_transform(struct ablkcipher_request *r
 
 	nss_cfi_dbg("cipher_len: %d, iv_len: %d, auth_len: %d"
 			"cipher_skip: %d, auth_skip: %d\n",
-			buf->cipher_len, ivsize, buf->auth_len,
+			buf->cipher_len, iv_size, buf->auth_len,
 			info->params->cipher_skip, info->params->auth_skip);
 	nss_cfi_dbg("before transformation\n");
 	nss_cfi_dbg_data(sg_virt(req->src), cipher_len, ' ');

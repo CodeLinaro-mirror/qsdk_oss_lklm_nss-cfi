@@ -16,12 +16,12 @@
  *
  */
 
-#ifndef __NSS_CRYPTOAPI_H
-#define __NSS_CRYPTOAPI_H
+#ifndef __NSS_CRYPTOAPI_PRIVATE_H
+#define __NSS_CRYPTOAPI_PRIVATE_H
 
 /**
  * nss_cryptoapi.h
- * 	Cryptoapi (Linux Crypto API framework) specific nss cfi header file
+ *	Cryptoapi (Linux Crypto API framework) specific nss cfi header file
  */
 
 #define NSS_CRYPTOAPI_MAX_DATA_LEN	((uint16_t) -1)
@@ -104,7 +104,7 @@ static inline bool nss_cryptoapi_is_decrypt(struct nss_cryptoapi_ctx *ctx)
 
 /*
  * nss_cryptoapi_check_unalign()
- * 	Cryptoapi verify if length is aligned to boundary.
+ *	Cryptoapi verify if length is aligned to boundary.
  */
 static inline bool nss_cryptoapi_check_unalign(uint32_t len, uint32_t boundary)
 {
@@ -151,5 +151,5 @@ int nss_cryptoapi_ablk_aes_decrypt(struct ablkcipher_request *req);
 int nss_cryptoapi_3des_cbc_encrypt(struct ablkcipher_request *req);
 int nss_cryptoapi_3des_cbc_decrypt(struct ablkcipher_request *req);
 
-#endif /* __NSS_CRYPTOAPI_H */
+#endif /* __NSS_CRYPTOAPI_PRIVATE_H */
 
