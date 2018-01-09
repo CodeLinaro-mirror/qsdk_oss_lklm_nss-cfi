@@ -80,6 +80,24 @@ extern struct nss_cryptoapi g_cryptoapi;
 #endif /* NSS_CFI_DEBUG */
 
 /*
+ * nss_cryptoapi_ahash_ctx2session()
+ *	Cryptoapi function to get the session ID for an AHASH
+ */
+int nss_cryptoapi_ahash_ctx2session(struct crypto_ahash *ahash, uint32_t *sid)
+{
+	struct crypto_tfm *tfm = crypto_ahash_tfm(ahash);
+	struct nss_cryptoapi_ctx *ctx = crypto_ahash_ctx(ahash);
+
+	if (strncmp("nss-", crypto_tfm_alg_driver_name(tfm), 4))
+		return -EINVAL;
+
+	*sid = ctx->sid;
+
+	return 0;
+}
+EXPORT_SYMBOL(nss_cryptoapi_ahash_ctx2session);
+
+/*
  * nss_cryptoapi_ahash_cra_init()
  *	Cryptoapi ahash init function.
  */
