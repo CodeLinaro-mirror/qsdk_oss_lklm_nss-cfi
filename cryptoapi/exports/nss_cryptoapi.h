@@ -39,4 +39,14 @@ int nss_cryptoapi_aead_ctx2session(struct crypto_aead *aead, uint32_t *sid);
  */
 int nss_cryptoapi_ablk_ctx2session(struct crypto_ablkcipher *ablk, uint32_t *sid);
 
+/**
+ * @brief Get the NSS crypto session ID corresponding to AHASH
+ *
+ * @param ablk[IN] Crypto AHASH
+ * @param sid[IN] Pointer to store the session ID
+ *
+ * @return 0 for success
+ */
+int nss_cryptoapi_ahash_ctx2session(struct crypto_ahash *ahash, uint32_t *sid);
+
 #endif /* !__NSS_CRYPTOAPI_H */
