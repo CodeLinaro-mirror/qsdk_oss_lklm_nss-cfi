@@ -486,9 +486,7 @@ static int32_t nss_cfi_ipsec_trap_encap(struct sk_buff *skb, struct nss_cfi_cryp
 	 */
 	if (nss_ipsecmgr_sa_add(nss_dev, &outer, &sa, &if_num) != NSS_IPSECMGR_OK) {
 		write_unlock(&tunnel_map.lock);
-		kfree(sa_entry);
-		dev_put(nss_dev);
-		return -EINVAL;
+		goto sa_free;
 	}
 
 	sa_entry->sid = crypto->sid;
@@ -500,13 +498,13 @@ static int32_t nss_cfi_ipsec_trap_encap(struct sk_buff *skb, struct nss_cfi_cryp
 flow_add:
 
 	/*
-	 * Flow add can fail due to duplicate entries, there is no need to
-	 * unwind any of the SA programming
+	 * If flow add fails due to lack of an IPsec manager SA entry, we need to remove
+	 * IPsec SA entry too and unwind any previous SA programming
 	 */
-	if (nss_ipsecmgr_flow_add(nss_dev, &inner, &outer) != NSS_IPSECMGR_OK) {
+	if (nss_ipsecmgr_flow_add(nss_dev, &inner, &outer) == NSS_IPSECMGR_FAIL_SA) {
+		list_del_init(&sa_entry->list);
 		write_unlock(&tunnel_map.lock);
-		dev_put(nss_dev);
-		return 0;
+		goto sa_free;
 	}
 
 	dev_put(nss_dev);
@@ -514,6 +512,11 @@ flow_add:
 
 	nss_cfi_dbg("Encap SA rule pushed successfully\n");
 	return 0;
+
+sa_free:
+	kfree(sa_entry);
+	dev_put(nss_dev);
+	return -EINVAL;
 }
 
 /*
@@ -611,9 +614,7 @@ static int32_t nss_cfi_ipsec_trap_decap(struct sk_buff *skb, struct nss_cfi_cryp
 	 */
 	if (nss_ipsecmgr_sa_add(nss_dev, &outer, &sa, &if_num) != NSS_IPSECMGR_OK) {
 		write_unlock(&tunnel_map.lock);
-		kfree(sa_entry);
-		dev_put(nss_dev);
-		return -EINVAL;
+		goto sa_free;
 	}
 
 	sa_entry->sid = crypto->sid;
@@ -625,13 +626,13 @@ static int32_t nss_cfi_ipsec_trap_decap(struct sk_buff *skb, struct nss_cfi_cryp
 flow_add:
 
 	/*
-	 * Flow add can fail due to duplicate entries, there is no need to
-	 * unwind any of the SA programming
+	 * If flow add fails due to lack of an IPsec manager SA entry,
+	 * we need to remove IPsec SA entry too
 	 */
-	if (nss_ipsecmgr_flow_add(nss_dev, &inner, &outer) != NSS_IPSECMGR_OK) {
+	if (nss_ipsecmgr_flow_add(nss_dev, &inner, &outer) == NSS_IPSECMGR_FAIL_SA) {
+		list_del_init(&sa_entry->list);
 		write_unlock(&tunnel_map.lock);
-		dev_put(nss_dev);
-		return 0;
+		goto sa_free;
 	}
 
 	dev_put(nss_dev);
@@ -639,6 +640,11 @@ flow_add:
 
 	nss_cfi_dbg("Decap SA rule pushed successfully\n");
 	return 0;
+
+sa_free:
+	kfree(sa_entry);
+	dev_put(nss_dev);
+	return -EINVAL;
 }
 
 /*
