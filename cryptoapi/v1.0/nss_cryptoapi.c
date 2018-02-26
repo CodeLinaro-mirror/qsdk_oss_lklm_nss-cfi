@@ -53,6 +53,10 @@
 
 struct nss_cryptoapi gbl_ctx;
 
+bool enable_ahash = false;
+module_param(enable_ahash, bool, S_IRUGO);
+MODULE_PARM_DESC(enable_ahash, "Enable Cryptoapi AHASH support");
+
 /*
  * crypto_alg structure initialization
  *	AEAD (Cipher and Authentication) and ABLK are supported by core crypto driver.
@@ -336,7 +340,7 @@ static nss_crypto_user_ctx_t nss_cryptoapi_register(nss_crypto_handle_t crypto)
 		nss_cfi_info("Aead registeration succeed, algo: %s\n", cryptoapi_algs[i].cra_name);
 	}
 
-	for (i = 0; i < ARRAY_SIZE(cryptoapi_ahash_algs); i++) {
+	for (i = 0; enable_ahash && i < ARRAY_SIZE(cryptoapi_ahash_algs); i++) {
 
 		rc = crypto_register_ahash(&cryptoapi_ahash_algs[i]);
 		if (rc) {
