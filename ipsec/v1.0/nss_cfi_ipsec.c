@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -843,11 +843,16 @@ int __init nss_cfi_ipsec_init_module(void)
 {
 	int i;
 
-	nss_cfi_info("NSS IPsec (platform - IPQ806x , %s) loaded\n", NSS_CFI_BUILD_ID);
+	if (!nss_cmn_get_nss_enabled()) {
+		nss_cfi_info("NSS is not enabled in this platform\n");
+		return 0;
+	}
 
 	for (i = 0; i < NSS_CRYPTO_MAX_IDXS; i++) {
 		sa_tbl[i].type = NSS_CFI_IPSEC_RULE_TYPE_NONE;
 	}
+
+	nss_cfi_info_always("NSS IPsec (platform - IPQ806x , %s) loaded\n", NSS_CFI_BUILD_ID);
 
 	register_netdevice_notifier(&nss_cfi_ipsec_notifier);
 
@@ -865,7 +870,7 @@ void __exit nss_cfi_ipsec_exit_module(void)
 
 	unregister_netdevice_notifier(&nss_cfi_ipsec_notifier);
 
-	nss_cfi_info("module unloaded\n");
+	nss_cfi_info_always("NSS IPsec module unloaded\n");
 }
 
 

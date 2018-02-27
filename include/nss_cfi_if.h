@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
@@ -30,6 +30,7 @@
 #define NSS_CFI_DEBUG_LVL_INFO 3
 #define NSS_CFI_DEBUG_LVL_TRACE 4
 
+#define nss_cfi_info_always(s, ...) pr_info("%s[%d]:" s, __func__, __LINE__, ##__VA_ARGS__)
 
 #if defined(CONFIG_DYNAMIC_DEBUG)
 /*
