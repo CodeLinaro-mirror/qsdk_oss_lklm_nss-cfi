@@ -65,6 +65,7 @@ struct nss_cryptoapi {
 	struct nss_crypto_user *user;			/* Crypto user handle */
 	struct dentry *root;				/* Root debugfs entry */
 	struct nss_cryptoapi_algo_info *algo_info;	/* algorithm table */
+	atomic_t registered;				/* Registration flag */
 };
 
 /*

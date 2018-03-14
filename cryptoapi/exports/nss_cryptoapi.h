@@ -49,4 +49,11 @@ int nss_cryptoapi_ablk_ctx2session(struct crypto_ablkcipher *ablk, uint32_t *sid
  */
 int nss_cryptoapi_ahash_ctx2session(struct crypto_ahash *ahash, uint32_t *sid);
 
+/**
+ * @brief Check if cryptoAPI driver is registered
+ *
+ * @return true if registration is done else false
+ */
+bool nss_cryptoapi_is_registered(void);
+
 #endif /* !__NSS_CRYPTOAPI_H */

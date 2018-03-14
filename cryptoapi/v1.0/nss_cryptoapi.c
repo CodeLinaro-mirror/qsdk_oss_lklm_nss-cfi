@@ -353,6 +353,11 @@ static nss_crypto_user_ctx_t nss_cryptoapi_register(nss_crypto_handle_t crypto)
 	}
 
 	/*
+	 * Set the registered flag
+	 */
+	atomic_set(&gbl_ctx.registered, 1);
+
+	/*
 	 * Initialize debugfs for cryptoapi.
 	 */
 	nss_cryptoapi_debugfs_init(sc);
@@ -371,6 +376,11 @@ static void nss_cryptoapi_unregister(nss_crypto_user_ctx_t cfi)
 	int i;
 
 	nss_cfi_info("unregister nss_cryptoapi\n");
+
+	/*
+	 * Clear the registered flag
+	 */
+	atomic_set(&gbl_ctx.registered, 0);
 
 	for (i = 0; i < ARRAY_SIZE(cryptoapi_algs); i++) {
 
@@ -391,12 +401,23 @@ static void nss_cryptoapi_unregister(nss_crypto_user_ctx_t cfi)
 		}
 		nss_cfi_info("Ahash unregister succeed, algo: %s\n",
 			cryptoapi_ahash_algs[i].halg.base.cra_name);
-}
+	}
+
 	/*
 	 * cleanup cryptoapi debugfs.
 	 */
 	nss_cryptoapi_debugfs_exit(sc);
 }
+
+/*
+ * nss_cryptoapi_is_registered()
+ *	Cryptoapi function to check if crypto driver is registered
+ */
+bool nss_cryptoapi_is_registered(void)
+{
+	return !!atomic_read(&gbl_ctx.registered);
+}
+EXPORT_SYMBOL(nss_cryptoapi_is_registered);
 
 /*
  * nss_cryptoapi_init()
@@ -407,6 +428,8 @@ int nss_cryptoapi_init(void)
 	struct nss_cryptoapi *sc = &gbl_ctx;
 
 	sc->crypto = NULL;
+
+	atomic_set(&gbl_ctx.registered, 0);
 
 	nss_crypto_register_user(nss_cryptoapi_register, nss_cryptoapi_unregister, "nss_cryptoapi");
 	nss_cfi_info("initialize nss_cryptoapi\n");

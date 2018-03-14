@@ -1184,6 +1184,11 @@ void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
 			ahash->halg.base.cra_flags = 0;
 		}
 	}
+
+	/*
+	 * Set the registered flag
+	 */
+	atomic_set(&g_cryptoapi.registered, (enable_aead || enable_ablk || enable_ahash));
 }
 
 /*
@@ -1199,6 +1204,11 @@ void nss_cryptoapi_detach_user(void *app_data, struct nss_crypto_user *user)
 	int i;
 
 	nss_cfi_info("unregister nss_cryptoapi\n");
+
+	/*
+	 * Clear the registered flag
+	 */
+	atomic_set(&g_cryptoapi.registered, 0);
 
 	for (i = 0; enable_ablk && (i < ARRAY_SIZE(cryptoapi_ablkcipher_algs)); i++, ablk++) {
 		if (!ablk->cra_flags)
@@ -1238,6 +1248,16 @@ struct nss_cryptoapi g_cryptoapi = {
 };
 
 /*
+ * nss_cryptoapi_is_registered()
+ *	Cryptoapi function to check if crypto driver is registered
+ */
+bool nss_cryptoapi_is_registered(void)
+{
+	return !!atomic_read(&g_cryptoapi.registered);
+}
+EXPORT_SYMBOL(nss_cryptoapi_is_registered);
+
+/*
  * nss_cryptoapi_init()
  * 	Initializing crypto core layer
  */
@@ -1254,6 +1274,8 @@ int nss_cryptoapi_init(void)
 	 * Fill context free timeout
 	 */
 	g_cryptoapi.ctx.timeout_ticks = msecs_to_jiffies(free_timeout * MSEC_PER_SEC);
+
+	atomic_set(&g_cryptoapi.registered, 0);
 
 	g_cryptoapi.user = nss_crypto_register_user(&g_cryptoapi.ctx, &g_cryptoapi);
 	if (!g_cryptoapi.user) {

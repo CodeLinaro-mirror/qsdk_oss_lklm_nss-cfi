@@ -63,6 +63,7 @@ struct nss_cryptoapi {
 	nss_crypto_handle_t crypto;		/* crypto handle */
 	struct dentry *root_dentry;
 	struct dentry *stats_dentry;
+	atomic_t registered;			/* Registration flag */
 };
 
 struct nss_cryptoapi_ctx {
