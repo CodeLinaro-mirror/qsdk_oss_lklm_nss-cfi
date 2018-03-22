@@ -256,6 +256,7 @@ static int nss_cfi_ocf_newsession(device_t dev, uint32_t *sidp, struct cryptoini
 	}
 
 	memset(&cfi_crypto, 0, sizeof(struct nss_cfi_crypto_info));
+	memset(&session_data, 0, sizeof(struct nss_crypto_session_data));
 
 	switch (cri->cri_alg) {
 	case CRYPTO_SHA1_HMAC:
@@ -298,8 +299,6 @@ static int nss_cfi_ocf_newsession(device_t dev, uint32_t *sidp, struct cryptoini
 	cfi_crypto.algo = alg;
 
 	session_data.algo = alg;
-	session_data.sec_key_offset = 0;
-	session_data.sec_key = 0;
 
 	status = nss_crypto_session_alloc(sc->crypto, &session_data, &session);
 	if (status < 0) {
