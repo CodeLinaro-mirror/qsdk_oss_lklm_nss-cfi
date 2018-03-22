@@ -320,6 +320,9 @@ int nss_cryptoapi_ablk_encrypt(struct ablkcipher_request *req)
 	 * restore the length of scatterlist back to its original value.
 	 */
 	for_each_sg(req->src, cur, info.nsegs, i) {
+		if (!cur)
+			break;
+
 		tot_len += cur->length;
 		if (!sg_next(cur))
 			break;

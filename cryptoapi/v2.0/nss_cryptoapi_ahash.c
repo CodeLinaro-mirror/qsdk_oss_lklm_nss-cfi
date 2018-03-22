@@ -170,6 +170,9 @@ int nss_cryptoapi_ahash_setkey(struct crypto_ahash *ahash, const u8 *key, unsign
 	data.algo = ctx->info->algo;
 	data.auth_key = key;
 
+	if (data.algo >= NSS_CRYPTO_CMN_ALGO_MAX)
+		return -ERANGE;
+
 	status = nss_crypto_session_alloc(ctx->user, &data, &ctx->sid);
 	if (status < 0) {
 		nss_cfi_warn("%p: Unable to allocate crypto session(%d)\n", ctx, status);
@@ -256,6 +259,9 @@ int nss_cryptoapi_ahash_init(struct ahash_request *req)
 		 * Fill NSS crypto session data
 		 */
 		data.algo = ctx->info->algo;
+
+		if (data.algo >= NSS_CRYPTO_CMN_ALGO_MAX)
+			return -ERANGE;
 
 		status = nss_crypto_session_alloc(ctx->user, &data, &ctx->sid);
 		if (status < 0) {
