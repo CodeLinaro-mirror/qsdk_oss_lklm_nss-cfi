@@ -263,7 +263,7 @@ static int32_t nss_cfi_ipsec_free_session(uint32_t crypto_sid)
 {
 	uint16_t crypto_idx = crypto_sid & NSS_CFI_IPSEC_SES_MASK;
 	struct nss_cfi_ipsec_tunnel_entry *tun;
-	struct nss_cfi_ipsec_sa *sa;
+	struct nss_cfi_ipsec_sa *sa = NULL;
 	struct net_device *nss_dev;
 	int i;
 

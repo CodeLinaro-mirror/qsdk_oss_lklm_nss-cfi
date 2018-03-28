@@ -684,7 +684,7 @@ int nss_cfi_ocf_init(void)
 
 	user_ctx->attach = nss_cfi_ocf_register;
 	user_ctx->detach = nss_cfi_ocf_unregister;
-	strcpy(user_ctx->name, "nss_cfi_ocf");
+	strlcpy(user_ctx->name, "nss_cfi_ocf", NSS_CRYPTO_NAME_MAX);
 	user_ctx->hdr_pool_sz = 1024;
 	user_ctx->default_hdr_sz = 512;
 	user_ctx->timeout_ticks = 1;
