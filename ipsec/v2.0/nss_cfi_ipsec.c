@@ -666,7 +666,7 @@ static int nss_cfi_ipsec_dev_event(struct notifier_block *this, unsigned long ev
 	case NETDEV_REGISTER:
 		index = nss_cfi_ipsec_get_index(klips_dev->name);
 		if ((index < 0) || (index >= tunnel_map.max)) {
-			nss_cfi_err("Netdev(%s) is not KLIPS IPsec related\n", klips_dev->name);
+			nss_cfi_trace("Netdev(%s) is not KLIPS IPsec related\n", klips_dev->name);
 			return NOTIFY_DONE;
 		}
 
@@ -704,7 +704,7 @@ static int nss_cfi_ipsec_dev_event(struct notifier_block *this, unsigned long ev
 	case NETDEV_UNREGISTER:
 		index = nss_cfi_ipsec_get_index(klips_dev->name);
 		if ((index < 0) || (index >= tunnel_map.max)) {
-			nss_cfi_err("Netdev(%s) is not KLIPS IPsec related\n", klips_dev->name);
+			nss_cfi_trace("Netdev(%s) is not KLIPS IPsec related\n", klips_dev->name);
 			return NOTIFY_DONE;
 		}
 
