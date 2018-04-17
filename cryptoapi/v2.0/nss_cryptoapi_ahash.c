@@ -1,4 +1,4 @@
-/* Copyright (c) 2017 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -310,7 +310,11 @@ int nss_cryptoapi_ahash_update(struct ahash_request *req)
 	/*
 	 * .update can only be called one time for one request
 	 */
-	BUG_ON(rctx->buf_count > 0);
+	WARN_ON(rctx->buf_count > 0);
+
+	if (rctx->buf_count > 0)
+		return -EPERM;
+
 	rctx->buf_count = 1;
 
 	/*
