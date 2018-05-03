@@ -55,6 +55,7 @@
  */
 struct nss_cfi_ipsec_skb_cb {
 	struct net_device *hlos_dev;
+	bool natt;
 };
 
 /*
@@ -152,6 +153,16 @@ static enum nss_ipsecmgr_algo nss_cfi_ipsec_get_algo(enum nss_crypto_cmn_algo al
 		nss_cfi_err("Invalid algorithm\n");
 		return NSS_IPSECMGR_ALGO_MAX;
 	}
+}
+
+/*
+ * nss_cfi_ipsec_get_natt()
+ * 	Get NATT information. Openswan stack fills up NATT flag in skb.
+ */
+static inline bool nss_cfi_ipsec_get_natt(struct sk_buff *skb)
+{
+	struct nss_cfi_ipsec_skb_cb *ipsec_cb = (struct nss_cfi_ipsec_skb_cb *)skb->cb;
+	return ipsec_cb->natt;
 }
 
 /*
@@ -313,7 +324,8 @@ static int32_t nss_cfi_ipsec_free_session(uint32_t crypto_sid)
  * nss_cfi_ipsec_fill_outer_flow_v4()
  *	Fill v4 outer flow from skb.
  */
-static void *nss_cfi_ipsec_fill_flow_outer(uint8_t *ip_start, uint8_t iv_len, struct nss_ipsecmgr_flow_outer *outer,
+static void *nss_cfi_ipsec_fill_flow_outer(uint8_t *ip_start, uint8_t iv_len, bool natt,
+						struct nss_ipsecmgr_flow_outer *outer,
 						uint8_t *ttl_hop_limit)
 {
 	struct iphdr *iph = (struct iphdr *)ip_start;
@@ -321,20 +333,22 @@ static void *nss_cfi_ipsec_fill_flow_outer(uint8_t *ip_start, uint8_t iv_len, st
 	struct ip_esp_hdr *esp;
 
 	/*
-	 * KLIPS only sends packets with ESP header for encapsulation
-	 * Note: The NATT/UDP header is added after encrypt or removed
-	 * before decrypt
+	 * KLIPS only sends packets with ESP header for encapsulation.
+	 * For decapsulation, the NATT/UDP can still be present.
+	 * Note: The NATT/UDP header is added after encrypt.
 	 */
-	if ((iph->version == IPVERSION) && (iph->protocol == IPPROTO_ESP)) {
+	if (iph->version == IPVERSION) {
+		uint8_t *esp_start = ip_start + sizeof(*iph);
+		esp_start += natt ? sizeof(struct udphdr) : 0;
+		esp = (struct ip_esp_hdr *)esp_start;
+
 		outer->src_ip[0] = ntohl(iph->saddr);
 		outer->dest_ip[0] = ntohl(iph->daddr);
-
-		esp = (struct ip_esp_hdr *)(ip_start + sizeof(*iph));
 		outer->spi_index = ntohl(esp->spi);
 		outer->ip_version = IPVERSION;
 		*ttl_hop_limit = iph->ttl;
 
-		return ip_start + sizeof(*iph) + sizeof(*esp) + iv_len;
+		return (uint8_t *)esp + sizeof(*esp) + iv_len;
 	}
 
 	if ((iph->version == 6) && (ip6h->nexthdr == IPPROTO_ESP)) {
@@ -428,14 +442,16 @@ static int32_t nss_cfi_ipsec_trap_encap(struct sk_buff *skb, struct nss_cfi_cryp
 	 */
 	nss_ipsecmgr_sa_cmn_init_idx(&sa.cmn, algo, crypto->sid,
 				iv_blk_len, iv_blk_len, crypto->hash_len,
-				false,	/* secure_key */
-				false,	/* no_trailer */
-				false,	/* esn */
-				false	/* natt */
+				false,				/* secure_key */
+				false,				/* no_trailer */
+				false,				/* esn */
+				nss_cfi_ipsec_get_natt(skb)	/* natt */
 				);
 
-	inner_ip = nss_cfi_ipsec_fill_flow_outer(skb->data, iv_blk_len,
-						&outer, &ttl_hop_limit);
+	/*
+	 * KLIPS adds NATT/UDP header after encrypt.
+	 */
+	inner_ip = nss_cfi_ipsec_fill_flow_outer(skb->data, iv_blk_len, false, &outer, &ttl_hop_limit);
 	if (!inner_ip) {
 		nss_cfi_warn("%p:Failed to fill outer flow rule\n", skb);
 		return -EINVAL;
@@ -536,6 +552,7 @@ static int32_t nss_cfi_ipsec_trap_decap(struct sk_buff *skb, struct nss_cfi_cryp
 	uint8_t *inner_ip;
 	int8_t iv_blk_len;
 	uint32_t if_num;
+	bool natt;
 
 	iv_blk_len = nss_cfi_ipsec_get_iv_blk_len(crypto->algo);
 	if (iv_blk_len < 0) {
@@ -552,19 +569,19 @@ static int32_t nss_cfi_ipsec_trap_decap(struct sk_buff *skb, struct nss_cfi_cryp
 	/*
 	 * construct SA information
 	 */
+	natt = nss_cfi_ipsec_get_natt(skb);
 	nss_ipsecmgr_sa_cmn_init_idx(&sa.cmn, algo, crypto->sid,
 				iv_blk_len, iv_blk_len, crypto->hash_len,
 				false,	/* secure_key */
 				false,	/* no_trailer */
 				false,	/* esn */
-				false	/* natt */
+				natt	/* natt */
 				);
 
 	/*
 	 * construct outer flow information
 	 */
-	inner_ip = nss_cfi_ipsec_fill_flow_outer(skb_network_header(skb),
-					iv_blk_len, &outer, &ttl_hop_limit);
+	inner_ip = nss_cfi_ipsec_fill_flow_outer(skb_network_header(skb), iv_blk_len, natt, &outer, &ttl_hop_limit);
 	if (!inner_ip) {
 		nss_cfi_warn("%p:Failed to fill outer flow rule\n", skb);
 		return -EINVAL;
