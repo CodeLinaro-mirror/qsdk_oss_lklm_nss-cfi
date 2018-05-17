@@ -768,6 +768,41 @@ static int nss_cfi_ipsec_dev_event(struct notifier_block *this, unsigned long ev
 		dev_put(nss_dev);
 		break;
 
+	case NETDEV_CHANGEMTU:
+		index = nss_cfi_ipsec_get_index(klips_dev->name);
+
+		if ((index < 0) || (index >= tunnel_map.max)) {
+			nss_cfi_trace("Netdev(%s) is not KLIPS IPsec related\n", klips_dev->name);
+			return NOTIFY_DONE;
+		}
+
+		/*
+		 * Read lock necessary as tunnel map table is accessed but
+		 * not modified
+		 */
+		write_lock_bh(&tunnel_map.lock);
+		tun = &tunnel_map.tbl[index];
+
+		if ((tun->klips_dev_index < 0) || (tun->nss_dev_index < 0)) {
+			write_unlock_bh(&tunnel_map.lock);
+			nss_cfi_err("%p:Failed to find tunnel map\n", klips_dev);
+			return NOTIFY_DONE;
+		}
+
+		if (tun->klips_dev_index != klips_dev->ifindex) {
+			write_unlock_bh(&tunnel_map.lock);
+			nss_cfi_err("Failed to find NSS IPsec tunnel dev for %s\n", klips_dev->name);
+			return NOTIFY_DONE;
+		}
+
+		nss_dev = dev_get_by_index(&init_net, tun->nss_dev_index);
+		BUG_ON(!nss_dev);
+		write_unlock_bh(&tunnel_map.lock);
+
+		dev_set_mtu(nss_dev, klips_dev->mtu);
+		dev_put(nss_dev);
+		break;
+
 	default:
 		return NOTIFY_DONE;
 	}
