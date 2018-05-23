@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -131,14 +131,25 @@ void nss_cryptoapi_aead_exit(struct crypto_tfm *tfm)
 
 	nss_cfi_assert(ctx);
 
-	if (!atomic_dec_and_test(&ctx->refcnt)) {
-		nss_cfi_err("Process done is not completed, while exit is called\n");
-		nss_cfi_assert(false);
-	}
-
 	if (ctx->sw_tfm) {
 		crypto_free_aead(__crypto_aead_cast(ctx->sw_tfm));
 		ctx->sw_tfm = NULL;
+		return;
+	}
+
+	/*
+	 * If, setkey is not done then return with out doing
+	 * any de-allocation
+	 */
+	if (!atomic_read(&ctx->refcnt))
+		return;
+
+	/*
+	 * Check if there are outstanding references
+	 */
+	if (!atomic_dec_and_test(&ctx->refcnt)) {
+		nss_cfi_err("Process done is not completed, while exit is called\n");
+		nss_cfi_assert(false);
 	}
 
 	/*
