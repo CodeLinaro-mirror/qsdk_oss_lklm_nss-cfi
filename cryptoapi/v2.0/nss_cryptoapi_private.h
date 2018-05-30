@@ -41,6 +41,7 @@ enum nss_cryptoapi_cipher_mode {
 	NSS_CRYPTOAPI_CIPHER_MODE_NONE = 0,		/* NULL cipher mode */
 	NSS_CRYPTOAPI_CIPHER_MODE_ECB,			/* Electronic Code Block */
 	NSS_CRYPTOAPI_CIPHER_MODE_CBC,			/* Cipher Block Chaining */
+	NSS_CRYPTOAPI_CIPHER_MODE_GCM,
 	NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,		/* Counter Mode */
 	NSS_CRYPTOAPI_CIPHER_MODE_GCM_RFC4106,			/* Galois Counter Mode */
 	NSS_CRYPTOAPI_CIPHER_MODE_MAX

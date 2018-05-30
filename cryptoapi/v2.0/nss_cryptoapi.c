@@ -446,6 +446,33 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.aead_tx_proc = nss_cryptoapi_aead_seqiv_tx_proc,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
 	},
+	{
+		.cra_name = "gcm(aes))",
+		.cipher_keylen = AES_KEYSIZE_128,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES128_GCM_GMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_GCM,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_GMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
+		.nonce = 0,
+	},
+	{
+		.cra_name = "gcm(aes)",
+		.cipher_keylen = AES_KEYSIZE_192,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES192_GCM_GMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_GCM,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_GMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
+		.nonce = 0,
+	},
+	{
+		.cra_name = "gcm(aes)",
+		.cipher_keylen = AES_KEYSIZE_256,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES256_GCM_GMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_GCM,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_GMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
+		.nonce = 0,
+	}
 };
 
 /*
@@ -720,6 +747,29 @@ struct aead_alg cryptoapi_aead_algs[] = {
 		.init = nss_cryptoapi_aead_init,
 		.exit = nss_cryptoapi_aead_exit,
 		.ivsize = 8,
+		.maxauthsize = GHASH_DIGEST_SIZE,
+		.setkey = nss_cryptoapi_aead_setkey_noauth,
+		.setauthsize = nss_cryptoapi_aead_setauthsize,
+		.encrypt = nss_cryptoapi_aead_encrypt,
+		.decrypt = nss_cryptoapi_aead_decrypt,
+	},
+	{	/*
+		 * GCM
+		 */
+		.base = {
+			.cra_name = "gcm(aes)",
+			.cra_driver_name = "nss-gcm",
+			.cra_priority = 10000,
+			.cra_flags = CRYPTO_ALG_ASYNC,
+			.cra_blocksize = AES_BLOCK_SIZE,
+			.cra_ctxsize = sizeof(struct nss_cryptoapi_ctx),
+			.cra_alignmask = 0,
+			.cra_module = THIS_MODULE,
+		},
+
+		.init = nss_cryptoapi_aead_init,
+		.exit = nss_cryptoapi_aead_exit,
+		.ivsize = 12,
 		.maxauthsize = GHASH_DIGEST_SIZE,
 		.setkey = nss_cryptoapi_aead_setkey_noauth,
 		.setauthsize = nss_cryptoapi_aead_setauthsize,
@@ -1059,7 +1109,8 @@ int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_
 	/*
 	 * For GCM, overwrite auth only len
 	 */
-	if (ctx->info->cipher_mode == NSS_CRYPTOAPI_CIPHER_MODE_GCM_RFC4106)
+	if ((ctx->info->cipher_mode == NSS_CRYPTOAPI_CIPHER_MODE_GCM) ||
+	    (ctx->info->cipher_mode == NSS_CRYPTOAPI_CIPHER_MODE_GCM_RFC4106))
 		nss_crypto_hdr_set_auth(ch, info->auth);
 
 	/*
@@ -1095,6 +1146,13 @@ int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_
 	switch (ctx->info->cipher_mode) {
 	case NSS_CRYPTOAPI_CIPHER_MODE_CBC:
 		memcpy(iv_addr, info->iv, info->iv_size);
+		break;
+
+	case NSS_CRYPTOAPI_CIPHER_MODE_GCM:
+		((uint32_t *)iv_addr)[0] = ((uint32_t *)info->iv)[0];
+		((uint32_t *)iv_addr)[1] = ((uint32_t *)info->iv)[1];
+		((uint32_t *)iv_addr)[2] = ((uint32_t *)info->iv)[2];
+		((uint32_t *)iv_addr)[3] = ctx->ctx_iv[3];
 		break;
 
 	case NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686:
