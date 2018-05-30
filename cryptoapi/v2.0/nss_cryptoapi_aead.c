@@ -150,6 +150,8 @@ int nss_cryptoapi_aead_setkey_noauth(struct crypto_aead *aead, const u8 *key, un
 	struct crypto_tfm *tfm = crypto_aead_tfm(aead);
 	struct nss_cryptoapi_ctx *ctx = crypto_tfm_ctx(tfm);
 	struct nss_crypto_session_data data = {0};
+	const uint8_t *nonce = NULL;
+	uint16_t nonce_sz;
 	int32_t status;
 
 	/*
@@ -167,18 +169,22 @@ int nss_cryptoapi_aead_setkey_noauth(struct crypto_aead *aead, const u8 *key, un
 	if (ctx->info->algo >= NSS_CRYPTO_CMN_ALGO_MAX)
 		return -ERANGE;
 
-	ctx->iv_size = crypto_aead_ivsize(aead);
+	nonce_sz = ctx->info->nonce;
+	ctx->iv_size = crypto_aead_ivsize(aead) + nonce_sz + sizeof(uint32_t);
 
-	keylen = keylen - ctx->info->nonce;
-	memcpy(ctx->ctx_iv, key + keylen, ctx->info->nonce);
+	/* Last 4 bytes of the key are nonce in RFC4106 */
+	if (ctx->info->cipher_mode != NSS_CRYPTOAPI_CIPHER_MODE_GCM) {
+		nonce = key + (keylen - nonce_sz);
+		memcpy(ctx->ctx_iv, nonce, nonce_sz);
+	}
+
 	ctx->ctx_iv[3] = ntohl(0x1);
-	ctx->iv_size += ctx->info->nonce + sizeof(uint32_t);
 
 	data.algo = ctx->info->algo;
 	data.cipher_key = key;
 	data.auth_key = NULL;
-	data.nonce = key + keylen;
 	data.sec_key = false;
+	data.nonce = nonce;
 
 	status = nss_crypto_session_alloc(ctx->user, &data, &ctx->sid);
 	if (status < 0) {
@@ -414,6 +420,8 @@ void nss_cryptoapi_aead_tx_proc(struct nss_cryptoapi_ctx *ctx, struct aead_reque
 	 */
 	if (ctx->info->cipher_mode == NSS_CRYPTOAPI_CIPHER_MODE_GCM_RFC4106)
 		info->auth = req->assoclen - crypto_aead_ivsize(aead);
+	 else if (ctx->info->cipher_mode == NSS_CRYPTOAPI_CIPHER_MODE_GCM)
+		info->auth = req->assoclen;
 }
 
 /*
