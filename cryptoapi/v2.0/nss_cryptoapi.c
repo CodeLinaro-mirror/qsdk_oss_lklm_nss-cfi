@@ -156,6 +156,11 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.algo = NSS_CRYPTO_CMN_ALGO_SHA256_HASH,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HASH,
 	},
+	{
+		.cra_name = "sha384",
+		.algo = NSS_CRYPTO_CMN_ALGO_SHA384_HASH,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HASH,
+	},
 
 	/*
 	 * Aynsc keyed HMAC digests
@@ -172,6 +177,13 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.digest_sz = SHA256_DIGEST_SIZE,
 		.auth_blocksize = SHA256_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_SHA256_HMAC,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+	},
+	{
+		.cra_name = "hmac(sha384)",
+		.digest_sz = SHA384_DIGEST_SIZE,
+		.auth_blocksize = SHA384_BLOCK_SIZE,
+		.algo = NSS_CRYPTO_CMN_ALGO_SHA384_HMAC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
 	},
 
@@ -985,6 +997,32 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 			},
 		},
 	},
+	{
+		.init   = nss_cryptoapi_ahash_init,
+		.update = nss_cryptoapi_ahash_update,
+		.final  = nss_cryptoapi_ahash_final,
+		.export = nss_cryptoapi_ahash_export,
+		.import = nss_cryptoapi_ahash_import,
+		.digest = nss_cryptoapi_ahash_digest,
+		.setkey = NULL,
+		.halg   = {
+			.digestsize = SHA384_DIGEST_SIZE,
+			.statesize  = sizeof(struct sha512_state),
+			.base       = {
+				.cra_name        = "sha384",
+				.cra_driver_name = "nss-sha384",
+				.cra_priority    = 1000,
+				.cra_flags       = CRYPTO_ALG_TYPE_AHASH | CRYPTO_ALG_ASYNC,
+				.cra_blocksize   = SHA384_BLOCK_SIZE,
+				.cra_ctxsize     = sizeof(struct nss_cryptoapi_ctx),
+				.cra_alignmask   = 0,
+				.cra_type        = &crypto_ahash_type,
+				.cra_module      = THIS_MODULE,
+				.cra_init        = nss_cryptoapi_ahash_cra_init,
+				.cra_exit        = nss_cryptoapi_ahash_cra_exit,
+			},
+		},
+	},
 
 	/*
 	 * Aynsc keyed HMAC digests
@@ -1032,6 +1070,32 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 				.cra_priority    = 1000,
 				.cra_flags       = CRYPTO_ALG_TYPE_AHASH | CRYPTO_ALG_ASYNC,
 				.cra_blocksize   = SHA256_BLOCK_SIZE,
+				.cra_ctxsize     = sizeof(struct nss_cryptoapi_ctx),
+				.cra_alignmask   = 0,
+				.cra_type        = &crypto_ahash_type,
+				.cra_module      = THIS_MODULE,
+				.cra_init        = nss_cryptoapi_ahash_cra_init,
+				.cra_exit        = nss_cryptoapi_ahash_cra_exit,
+			},
+		},
+	},
+	{
+		.init   = nss_cryptoapi_ahash_init,
+		.update = nss_cryptoapi_ahash_update,
+		.final  = nss_cryptoapi_ahash_final,
+		.export = nss_cryptoapi_ahash_export,
+		.import = nss_cryptoapi_ahash_import,
+		.digest = nss_cryptoapi_ahash_digest,
+		.setkey = nss_cryptoapi_ahash_setkey,
+		.halg   = {
+			.digestsize = SHA384_DIGEST_SIZE,
+			.statesize  = sizeof(struct sha512_state),
+			.base       = {
+				.cra_name        = "hmac(sha384)",
+				.cra_driver_name = "nss-hmac-sha384",
+				.cra_priority    = 1000,
+				.cra_flags       = CRYPTO_ALG_TYPE_AHASH | CRYPTO_ALG_ASYNC,
+				.cra_blocksize   = SHA384_BLOCK_SIZE,
 				.cra_ctxsize     = sizeof(struct nss_cryptoapi_ctx),
 				.cra_alignmask   = 0,
 				.cra_type        = &crypto_ahash_type,
