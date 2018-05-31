@@ -77,6 +77,7 @@ struct nss_cryptoapi_req_ctx {
 	union {
 		struct sha1_state sha1;
 		struct sha256_state sha256;
+		struct sha512_state sha384;
 	} state;					/* States for SHA modes */
 
 	enum nss_cryptoapi_auth_mode auth_mode;		/* Auth mode */
@@ -84,7 +85,7 @@ struct nss_cryptoapi_req_ctx {
 
 	uint32_t buf_count;				/* Buffer input count */
 	uint32_t diglen;				/* Digest length */
-	uint8_t digest[SHA256_DIGEST_SIZE];		/* Storage for resultant digest */
+	uint8_t digest[SHA512_DIGEST_SIZE];		/* Storage for resultant digest */
 
 	uint16_t magic;					/* Magic */
 };
