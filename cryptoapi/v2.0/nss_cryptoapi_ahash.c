@@ -158,7 +158,7 @@ int nss_cryptoapi_ahash_setkey(struct crypto_ahash *ahash, const u8 *key, unsign
 	 */
 	NSS_CRYPTOAPI_VERIFY_MAGIC(ctx);
 
-	ctx->info = nss_cryptoapi_cra_name2info(crypto_tfm_alg_name(tfm), 0, keylen);
+	ctx->info = nss_cryptoapi_cra_name2info(crypto_tfm_alg_name(tfm), 0, crypto_ahash_digestsize(ahash));
 	if (!ctx->info) {
 		crypto_ahash_set_flags(ahash, CRYPTO_TFM_RES_BAD_KEY_LEN);
 		return -EINVAL;
@@ -169,6 +169,7 @@ int nss_cryptoapi_ahash_setkey(struct crypto_ahash *ahash, const u8 *key, unsign
 	 */
 	data.algo = ctx->info->algo;
 	data.auth_key = key;
+	data.auth_keylen = keylen;
 
 	if (data.algo >= NSS_CRYPTO_CMN_ALGO_MAX)
 		return -ERANGE;

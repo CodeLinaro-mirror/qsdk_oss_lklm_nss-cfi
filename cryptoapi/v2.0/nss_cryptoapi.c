@@ -162,13 +162,15 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	 */
 	{
 		.cra_name = "hmac(sha1)",
-		.auth_keylen = SHA1_DIGEST_SIZE,
+		.digest_sz = SHA1_DIGEST_SIZE,
+		.auth_blocksize = SHA1_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_SHA160_HMAC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
 	},
 	{
 		.cra_name = "hmac(sha256)",
-		.auth_keylen = SHA256_DIGEST_SIZE,
+		.digest_sz = SHA256_DIGEST_SIZE,
+		.auth_blocksize = SHA256_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_SHA256_HMAC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
 	},
@@ -179,7 +181,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "echainiv(authenc(hmac(sha1),cbc(aes)))",
 		.cipher_keylen = AES_KEYSIZE_128,
-		.auth_keylen = SHA1_DIGEST_SIZE,
+		.digest_sz = SHA1_DIGEST_SIZE,
+		.auth_blocksize = SHA1_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -188,7 +191,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "echainiv(authenc(hmac(sha256),cbc(aes)))",
 		.cipher_keylen = AES_KEYSIZE_128,
-		.auth_keylen = SHA256_DIGEST_SIZE,
+		.digest_sz = SHA256_DIGEST_SIZE,
+		.auth_blocksize = SHA256_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA256_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -197,7 +201,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "seqiv(authenc(hmac(sha1),rfc3686(ctr(aes))))",
 		.cipher_keylen = AES_KEYSIZE_128,
-		.auth_keylen = SHA1_DIGEST_SIZE,
+		.digest_sz = SHA1_DIGEST_SIZE,
+		.auth_blocksize = SHA1_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CTR_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
@@ -207,7 +212,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "seqiv(authenc(hmac(sha256),rfc3686(ctr(aes))))",
 		.cipher_keylen = AES_KEYSIZE_128,
-		.auth_keylen = SHA256_DIGEST_SIZE,
+		.digest_sz = SHA256_DIGEST_SIZE,
+		.auth_blocksize = SHA256_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CTR_SHA256_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
@@ -217,7 +223,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "authenc(hmac(sha1),cbc(aes))",
 		.cipher_keylen = AES_KEYSIZE_128,
-		.auth_keylen = SHA1_DIGEST_SIZE,
+		.digest_sz = SHA1_DIGEST_SIZE,
+		.auth_blocksize = SHA1_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -226,7 +233,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "authenc(hmac(sha256),cbc(aes))",
 		.cipher_keylen = AES_KEYSIZE_128,
-		.auth_keylen = SHA256_DIGEST_SIZE,
+		.digest_sz = SHA256_DIGEST_SIZE,
+		.auth_blocksize = SHA256_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA256_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -239,7 +247,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "echainiv(authenc(hmac(sha1),cbc(aes)))",
 		.cipher_keylen = AES_KEYSIZE_192,
-		.auth_keylen = SHA1_DIGEST_SIZE,
+		.digest_sz = SHA1_DIGEST_SIZE,
+		.auth_blocksize = SHA1_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CBC_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -248,7 +257,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "echainiv(authenc(hmac(sha256),cbc(aes)))",
 		.cipher_keylen = AES_KEYSIZE_192,
-		.auth_keylen = SHA256_DIGEST_SIZE,
+		.digest_sz = SHA256_DIGEST_SIZE,
+		.auth_blocksize = SHA256_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CBC_SHA256_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -257,7 +267,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "seqiv(authenc(hmac(sha1),rfc3686(ctr(aes))))",
 		.cipher_keylen = AES_KEYSIZE_192,
-		.auth_keylen = SHA1_DIGEST_SIZE,
+		.digest_sz = SHA1_DIGEST_SIZE,
+		.auth_blocksize = SHA1_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CTR_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
@@ -267,7 +278,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "seqiv(authenc(hmac(sha256),rfc3686(ctr(aes))))",
 		.cipher_keylen = AES_KEYSIZE_192,
-		.auth_keylen = SHA256_DIGEST_SIZE,
+		.digest_sz = SHA256_DIGEST_SIZE,
+		.auth_blocksize = SHA256_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CTR_SHA256_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
@@ -277,7 +289,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "authenc(hmac(sha1),cbc(aes))",
 		.cipher_keylen = AES_KEYSIZE_192,
-		.auth_keylen = SHA1_DIGEST_SIZE,
+		.digest_sz = SHA1_DIGEST_SIZE,
+		.auth_blocksize = SHA1_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CBC_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -286,7 +299,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "authenc(hmac(sha256),cbc(aes))",
 		.cipher_keylen = AES_KEYSIZE_192,
-		.auth_keylen = SHA256_DIGEST_SIZE,
+		.digest_sz = SHA256_DIGEST_SIZE,
+		.auth_blocksize = SHA256_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CBC_SHA256_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -299,7 +313,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "echainiv(authenc(hmac(sha1),cbc(aes)))",
 		.cipher_keylen = AES_KEYSIZE_256,
-		.auth_keylen = SHA1_DIGEST_SIZE,
+		.digest_sz = SHA1_DIGEST_SIZE,
+		.auth_blocksize = SHA1_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -308,7 +323,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "echainiv(authenc(hmac(sha256),cbc(aes)))",
 		.cipher_keylen = AES_KEYSIZE_256,
-		.auth_keylen = SHA256_DIGEST_SIZE,
+		.digest_sz = SHA256_DIGEST_SIZE,
+		.auth_blocksize = SHA256_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA256_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -317,7 +333,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "seqiv(authenc(hmac(sha1),rfc3686(ctr(aes))))",
 		.cipher_keylen = AES_KEYSIZE_256,
-		.auth_keylen = SHA1_DIGEST_SIZE,
+		.digest_sz = SHA1_DIGEST_SIZE,
+		.auth_blocksize = SHA1_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CTR_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
@@ -327,7 +344,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "seqiv(authenc(hmac(sha256),rfc3686(ctr(aes))))",
 		.cipher_keylen = AES_KEYSIZE_256,
-		.auth_keylen = SHA256_DIGEST_SIZE,
+		.digest_sz = SHA256_DIGEST_SIZE,
+		.auth_blocksize = SHA256_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CTR_SHA256_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
@@ -337,7 +355,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "authenc(hmac(sha1),cbc(aes))",
 		.cipher_keylen = AES_KEYSIZE_256,
-		.auth_keylen = SHA1_DIGEST_SIZE,
+		.digest_sz = SHA1_DIGEST_SIZE,
+		.auth_blocksize = SHA1_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -346,7 +365,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "authenc(hmac(sha256),cbc(aes))",
 		.cipher_keylen = AES_KEYSIZE_256,
-		.auth_keylen = SHA256_DIGEST_SIZE,
+		.digest_sz = SHA256_DIGEST_SIZE,
+		.auth_blocksize = SHA256_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA256_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -359,7 +379,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "echainiv(authenc(hmac(sha1),cbc(des3_ede)))",
 		.cipher_keylen = DES3_EDE_KEY_SIZE,
-		.auth_keylen = SHA1_DIGEST_SIZE,
+		.digest_sz = SHA1_DIGEST_SIZE,
+		.auth_blocksize = SHA1_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -368,7 +389,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "echainiv(authenc(hmac(sha256),cbc(des3_ede)))",
 		.cipher_keylen = DES3_EDE_KEY_SIZE,
-		.auth_keylen = SHA256_DIGEST_SIZE,
+		.digest_sz = SHA256_DIGEST_SIZE,
+		.auth_blocksize = SHA256_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA256_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -377,7 +399,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "authenc(hmac(sha1),cbc(des3_ede))",
 		.cipher_keylen = DES3_EDE_KEY_SIZE,
-		.auth_keylen = SHA1_DIGEST_SIZE,
+		.digest_sz = SHA1_DIGEST_SIZE,
+		.auth_blocksize = SHA1_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA160_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -386,7 +409,8 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 	{
 		.cra_name = "authenc(hmac(sha256),cbc(des3_ede))",
 		.cipher_keylen = DES3_EDE_KEY_SIZE,
-		.auth_keylen = SHA256_DIGEST_SIZE,
+		.digest_sz = SHA256_DIGEST_SIZE,
+		.auth_blocksize = SHA256_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA256_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
@@ -1024,7 +1048,7 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
  *     Lookup the associated algorithm in NSS for the given transformation
  */
 struct nss_cryptoapi_algo_info *nss_cryptoapi_cra_name2info(const char *cra_name, uint16_t enc_keylen,
-							uint16_t auth_keylen)
+							uint16_t digest_sz)
 {
 	struct nss_cryptoapi_algo_info *info = g_algo_info;
 	uint16_t klen;
@@ -1035,7 +1059,7 @@ struct nss_cryptoapi_algo_info *nss_cryptoapi_cra_name2info(const char *cra_name
 			continue;
 
 		klen = enc_keylen - info->nonce;
-		if ((info->cipher_keylen == klen) && (info->auth_keylen == auth_keylen))
+		if ((info->cipher_keylen == klen) && (info->digest_sz == digest_sz))
 			return info;
 	}
 
@@ -1251,7 +1275,8 @@ ssize_t nss_cryptoapi_ctx_info_read(struct file *fp, char __user *ubuf, size_t s
 	len = snprintf(buf, max_buf_len, "linux_algo - %s\n", ctx->info->cra_name);
 	len += snprintf(buf + len, max_buf_len - len, "nss_algo - %d\n", ctx->info->algo);
 	len += snprintf(buf + len, max_buf_len - len, "cipher_key_len - %d\n", ctx->info->cipher_keylen);
-	len += snprintf(buf + len, max_buf_len - len, "auth_key_len - %d\n", ctx->info->auth_keylen);
+	len += snprintf(buf + len, max_buf_len - len, "digest_size - %d\n", ctx->info->digest_sz);
+	len += snprintf(buf + len, max_buf_len - len, "auth_block_size - %d\n", ctx->info->auth_blocksize);
 	len += snprintf(buf + len, max_buf_len - len, "fallback_req - %d\n", ctx->fallback_req);
 
 	ret = simple_read_from_buffer(ubuf, sz, ppos, buf, len);
