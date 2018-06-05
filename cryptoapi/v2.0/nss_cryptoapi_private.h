@@ -147,7 +147,8 @@ typedef void (*nss_cryptoapi_aead_tx_proc_method_t)(struct nss_cryptoapi_ctx *ct
 struct nss_cryptoapi_algo_info {
 	const char *cra_name;				/* CryptoAPI name */
 	uint16_t cipher_keylen;				/* Cipher key length */
-	uint16_t auth_keylen;				/* Authentication key length */
+	uint16_t digest_sz;				/* Authentication digest size */
+	uint16_t auth_blocksize;			/* Authentication block length */
 	uint16_t nonce;					/* nonce value for counter mode */
 	enum nss_crypto_cmn_algo algo;			/* NSS crypto algorithm ID */
 	enum nss_cryptoapi_cipher_mode cipher_mode;	/* Cipher mode */
@@ -199,7 +200,7 @@ static inline void nss_cryptoapi_clear_magic(struct nss_cryptoapi_ctx *ctx)
  */
 extern struct nss_cryptoapi g_cryptoapi;
 extern int nss_cryptoapi_status2error(struct nss_cryptoapi_ctx *ctx, uint8_t status);
-extern struct nss_cryptoapi_algo_info *nss_cryptoapi_cra_name2info(const char *cra_name, uint16_t enc_keylen, uint16_t auth_keylen);
+extern struct nss_cryptoapi_algo_info *nss_cryptoapi_cra_name2info(const char *cra_name, uint16_t enc_keylen, uint16_t digest_sz);
 extern int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_info *info, void *app_data, bool ahash);
 /*
  * Debug fs
