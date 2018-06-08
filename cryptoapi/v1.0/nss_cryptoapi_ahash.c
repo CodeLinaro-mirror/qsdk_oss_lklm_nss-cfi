@@ -1,4 +1,4 @@
-/* Copyright (c) 2017 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -141,17 +141,19 @@ clear_magic:
 };
 
 /*
- * nss_cryptoapi_sha1_hmac_setkey()
+ * nss_cryptoapi_ahash_setkey()
  * 	Cryptoapi setkey routine for hmac(sha1).
  */
-int nss_cryptoapi_sha1_hmac_setkey(struct crypto_ahash *ahash, const u8 *key, unsigned int keylen)
+int nss_cryptoapi_ahash_setkey(struct crypto_ahash *ahash, const u8 *key, unsigned int keylen)
 {
+	struct crypto_tfm *tfm = &ahash->base;
 	struct nss_cryptoapi_ctx *ctx = crypto_tfm_ctx(&ahash->base);
 	struct nss_cryptoapi *sc = &gbl_ctx;
-	struct nss_crypto_key auth = { .algo = NSS_CRYPTO_AUTH_SHA1_HMAC };
+	struct nss_crypto_key auth;
 	struct nss_crypto_key cipher = { .algo = NSS_CRYPTO_CIPHER_AES_CBC };
 	uint32_t flag = CRYPTO_TFM_RES_BAD_KEY_LEN;
 	nss_crypto_status_t status;
+	uint32_t algo_keylen;
 
 	nss_cryptoapi_verify_magic(ctx);
 
@@ -163,7 +165,25 @@ int nss_cryptoapi_sha1_hmac_setkey(struct crypto_ahash *ahash, const u8 *key, un
 		return -EINVAL;
 	}
 
-	if (keylen > NSS_CRYPTO_MAX_KEYLEN_SHA1) {
+	/*
+	 * check for the algorithm
+	 */
+	if (!strncmp("nss-hmac-sha1", crypto_tfm_alg_driver_name(tfm), CRYPTO_MAX_ALG_NAME)) {
+		auth.algo = NSS_CRYPTO_AUTH_SHA1_HMAC;
+		algo_keylen = NSS_CRYPTO_MAX_KEYLEN_SHA1;
+	} else if (!strncmp("nss-hmac-sha256", crypto_tfm_alg_driver_name(tfm), CRYPTO_MAX_ALG_NAME)) {
+		auth.algo = NSS_CRYPTO_AUTH_SHA256_HMAC;
+		algo_keylen = NSS_CRYPTO_MAX_KEYLEN_SHA256;
+	} else {
+		nss_cfi_err("Unsupport AHASH algo(%s)\n", crypto_tfm_alg_driver_name(tfm));
+		goto fail;
+	}
+
+	/*
+	 * Check the provided key length against the
+	 * algorithm's supported key length.
+	 */
+	if (keylen > algo_keylen) {
 		nss_cfi_err("Bad Auth key_len(%d)\n", keylen);
 		goto fail;
 	}
@@ -192,7 +212,7 @@ int nss_cryptoapi_sha1_hmac_setkey(struct crypto_ahash *ahash, const u8 *key, un
 	nss_cfi_info("session id created: %d\n", ctx->sid);
 
 	ctx->cip_alg = NSS_CRYPTO_CIPHER_AES_CBC;
-	ctx->auth_alg = NSS_CRYPTO_AUTH_SHA1_HMAC;
+	ctx->auth_alg = auth.algo;
 
 	return 0;
 
@@ -207,11 +227,11 @@ fail:
 }
 
 /*
- * nss_cryptoapi_sha1_hmac_checkaddr()
+ * nss_cryptoapi_ahash_checkaddr()
  * 	Cryptoapi: obtain sg to virtual address mapping.
  * 	Check for multiple sg in src
  */
-static int nss_cryptoapi_sha1_hmac_checkaddr(struct ahash_request *req)
+static int nss_cryptoapi_ahash_checkaddr(struct ahash_request *req)
 {
 	struct scatterlist *sg = req->src;
 	struct scatterlist *sg_nxt = sg_next(sg);
@@ -305,7 +325,7 @@ struct nss_crypto_buf *nss_cryptoapi_sha_hmac_transform(struct ahash_request *re
 	info->params->cipher_skip = 0;
 	info->params->auth_skip = 0;
 
-	if (nss_cryptoapi_sha1_hmac_checkaddr(req)) {
+	if (nss_cryptoapi_ahash_checkaddr(req)) {
 		nss_cfi_err("Invalid address!\n");
 		return NULL;
 	}
@@ -354,13 +374,15 @@ struct nss_crypto_buf *nss_cryptoapi_sha_hmac_transform(struct ahash_request *re
 }
 
 /*
- * nss_cryptoapi_sha1_hmac_init()
+ * nss_cryptoapi_ahash_init()
  *	Cryptoapi ahash request .init operation.
  *	Initialize the private context for the specific request.
  */
-int nss_cryptoapi_sha1_hmac_init(struct ahash_request *req)
+int nss_cryptoapi_ahash_init(struct ahash_request *req)
 {
-	struct nss_cryptoapi_ctx *ctx = crypto_tfm_ctx(req->base.tfm);
+	struct crypto_ahash *ahash = crypto_ahash_reqtfm(req);
+	struct crypto_tfm *tfm = crypto_ahash_tfm(ahash);
+	struct nss_cryptoapi_ctx *ctx = crypto_tfm_ctx(tfm);
 	struct nss_cryptoapi_req_ctx *rctx = ahash_request_ctx(req);
 
 	nss_cryptoapi_verify_magic(ctx);
@@ -370,7 +392,7 @@ int nss_cryptoapi_sha1_hmac_init(struct ahash_request *req)
 		return -EINVAL;
 	}
 
-	if (nss_crypto_get_auth(ctx->sid) != NSS_CRYPTO_AUTH_SHA1_HMAC) {
+	if (nss_crypto_get_auth(ctx->sid) != ctx->auth_alg) {
 		nss_cfi_err("Invalid Auth Algo for session id: %d\n", ctx->sid);
 		return -EINVAL;
 	}
@@ -379,19 +401,19 @@ int nss_cryptoapi_sha1_hmac_init(struct ahash_request *req)
 	 * Initialze the private context
 	 */
 	rctx->is_used = false;
-	rctx->diglen = SHA1_DIGEST_SIZE;
-	memset(&rctx->digest[0], 0x00, SHA1_DIGEST_SIZE);
+	rctx->diglen = crypto_ahash_digestsize(ahash);
+	memset(rctx->digest, 0, ARRAY_SIZE(rctx->digest));
 
 	return 0;
 };
 
 /*
- * nss_cryptoapi_sha1_hmac_update()
+ * nss_cryptoapi_ahash_update()
  *	Cryptoapi ahash .update operation for a specific request.
  *	Accept user's data and post the data to NSS FW for transformation.
  *	Not return the hash result to user
  */
-int nss_cryptoapi_sha1_hmac_update(struct ahash_request *req)
+int nss_cryptoapi_ahash_update(struct ahash_request *req)
 {
 	struct nss_crypto_params params = { .req_type = NSS_CRYPTO_REQ_TYPE_AUTH };
 	struct nss_cryptoapi_ahash_info info = {.cb_fn = nss_cryptoapi_sha_hmac_done,
@@ -408,7 +430,7 @@ int nss_cryptoapi_sha1_hmac_update(struct ahash_request *req)
 		return -EINVAL;
 	}
 
-	if (nss_crypto_get_auth(ctx->sid) != NSS_CRYPTO_AUTH_SHA1_HMAC) {
+	if (nss_crypto_get_auth(ctx->sid) != ctx->auth_alg) {
 		nss_cfi_err("Invalid Auth Algo for session id: %d\n", ctx->sid);
 		return -EINVAL;
 	}
@@ -442,13 +464,15 @@ int nss_cryptoapi_sha1_hmac_update(struct ahash_request *req)
 }
 
 /*
- * nss_cryptoapi_sha1_hmac_final()
+ * nss_cryptoapi_ahash_final()
  *	Cryptoapi ahash .final operation for a specific request.
  *	Copy the hash result to user
  */
-int nss_cryptoapi_sha1_hmac_final(struct ahash_request *req)
+int nss_cryptoapi_ahash_final(struct ahash_request *req)
 {
-	struct nss_cryptoapi_ctx *ctx = crypto_tfm_ctx(req->base.tfm);
+	struct crypto_ahash *ahash = crypto_ahash_reqtfm(req);
+	struct crypto_tfm *tfm = crypto_ahash_tfm(ahash);
+	struct nss_cryptoapi_ctx *ctx = crypto_tfm_ctx(tfm);
 	struct nss_cryptoapi_req_ctx *rctx = ahash_request_ctx(req);
 
 	nss_cryptoapi_verify_magic(ctx);
@@ -458,23 +482,23 @@ int nss_cryptoapi_sha1_hmac_final(struct ahash_request *req)
 		return -EINVAL;
 	}
 
-	if (nss_crypto_get_auth(ctx->sid) != NSS_CRYPTO_AUTH_SHA1_HMAC) {
+	if (nss_crypto_get_auth(ctx->sid) != ctx->auth_alg) {
 		nss_cfi_err("Invalid Auth Algo for session id: %d\n", ctx->sid);
 		return -EINVAL;
 	}
 
 	nss_cfi_assert(req->result);
-	memcpy(req->result, rctx->digest, SHA1_DIGEST_SIZE);
+	memcpy(req->result, rctx->digest, crypto_ahash_digestsize(ahash));
 	rctx->is_used = false;
 
 	return 0;
 }
 
 /*
- * nss_cryptoapi_sha1_hmac_digest()
+ * nss_cryptoapi_ahash_digest()
  *	Cryptoapi ahash request .digest operation.
  */
-int nss_cryptoapi_sha1_hmac_digest(struct ahash_request *req)
+int nss_cryptoapi_ahash_digest(struct ahash_request *req)
 {
 	struct nss_crypto_params params = { .req_type = NSS_CRYPTO_REQ_TYPE_AUTH };
 	struct nss_cryptoapi_ahash_info info = {.cb_fn = nss_cryptoapi_sha_hmac_done,
@@ -484,7 +508,7 @@ int nss_cryptoapi_sha1_hmac_digest(struct ahash_request *req)
 	struct nss_cryptoapi_req_ctx *rctx = ahash_request_ctx(req);
 	struct nss_crypto_buf *buf;
 
-	if (nss_cryptoapi_sha1_hmac_init(req) != NSS_CRYPTO_STATUS_OK)
+	if (nss_cryptoapi_ahash_init(req) != NSS_CRYPTO_STATUS_OK)
 		return -EINVAL;
 
 	buf = nss_cryptoapi_sha_hmac_transform(req, &info);
@@ -508,24 +532,24 @@ int nss_cryptoapi_sha1_hmac_digest(struct ahash_request *req)
 }
 
 /*
- * nss_cryptoapi_sha1_hmac_export()
+ * nss_cryptoapi_ahash_export()
  *	Cryptoapi ahash .export operation.
  *	Used to export data to other transform.
  *	Not support now, just ASSERT to notify users.
  */
-int nss_cryptoapi_sha1_hmac_export(struct ahash_request *req, void *out)
+int nss_cryptoapi_ahash_export(struct ahash_request *req, void *out)
 {
 	nss_cfi_assert(false);
 	return 0;
 };
 
 /*
- * nss_cryptoapi_sha1_hmac_import()
+ * nss_cryptoapi_ahash_import()
  *	Cryptoapi ahash .import operation.
  *	Used to import data from other transform.
  *	Not support now, just ASSERT to notify users.
  */
-int nss_cryptoapi_sha1_hmac_import(struct ahash_request *req, const void *in)
+int nss_cryptoapi_ahash_import(struct ahash_request *req, const void *in)
 {
 	nss_cfi_assert(false);
 	return 0;
