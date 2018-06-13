@@ -259,6 +259,16 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.aead_tx_proc = nss_cryptoapi_aead_seqiv_tx_proc,
 	},
 	{
+		.cra_name = "echainiv(authenc(hmac(sha384),cbc(aes)))",
+		.cipher_keylen = AES_KEYSIZE_128,
+		.digest_sz = SHA384_DIGEST_SIZE,
+		.auth_blocksize = SHA384_BLOCK_SIZE,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA384_HMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_echainiv_tx_proc,
+	},
+	{
 		.cra_name = "seqiv(authenc(hmac(sha1),rfc3686(ctr(aes))))",
 		.cipher_keylen = AES_KEYSIZE_128,
 		.digest_sz = SHA1_DIGEST_SIZE,
@@ -310,6 +320,16 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
 		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
 	},
+	{
+		.cra_name = "authenc(hmac(sha384),cbc(aes))",
+		.cipher_keylen = AES_KEYSIZE_128,
+		.digest_sz = SHA384_DIGEST_SIZE,
+		.auth_blocksize = SHA384_BLOCK_SIZE,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA384_HMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
+	},
 
 	/*
 	 * AEAD AES-192
@@ -354,6 +374,16 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.nonce = CTR_RFC3686_NONCE_SIZE,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
 		.aead_tx_proc = nss_cryptoapi_aead_seqiv_tx_proc,
+	},
+	{
+		.cra_name = "echainiv(authenc(hmac(sha384),cbc(aes)))",
+		.cipher_keylen = AES_KEYSIZE_192,
+		.digest_sz = SHA384_DIGEST_SIZE,
+		.auth_blocksize = SHA384_BLOCK_SIZE,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CBC_SHA384_HMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_echainiv_tx_proc,
 	},
 	{
 		.cra_name = "seqiv(authenc(hmac(sha1),rfc3686(ctr(aes))))",
@@ -407,6 +437,16 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
 		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
 	},
+	{
+		.cra_name = "authenc(hmac(sha384),cbc(aes))",
+		.cipher_keylen = AES_KEYSIZE_192,
+		.digest_sz = SHA384_DIGEST_SIZE,
+		.auth_blocksize = SHA384_BLOCK_SIZE,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CBC_SHA384_HMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
+	},
 
 	/*
 	 * AEAD AES-256
@@ -451,6 +491,16 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.nonce = CTR_RFC3686_NONCE_SIZE,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
 		.aead_tx_proc = nss_cryptoapi_aead_seqiv_tx_proc,
+	},
+	{
+		.cra_name = "echainiv(authenc(hmac(sha384),cbc(aes)))",
+		.cipher_keylen = AES_KEYSIZE_256,
+		.digest_sz = SHA384_DIGEST_SIZE,
+		.auth_blocksize = SHA384_BLOCK_SIZE,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA384_HMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_echainiv_tx_proc,
 	},
 	{
 		.cra_name = "seqiv(authenc(hmac(sha1),rfc3686(ctr(aes))))",
@@ -500,6 +550,16 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.digest_sz = SHA256_DIGEST_SIZE,
 		.auth_blocksize = SHA256_BLOCK_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA256_HMAC,
+		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
+		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
+	},
+	{
+		.cra_name = "authenc(hmac(sha384),cbc(aes))",
+		.cipher_keylen = AES_KEYSIZE_256,
+		.digest_sz = SHA384_DIGEST_SIZE,
+		.auth_blocksize = SHA384_BLOCK_SIZE,
+		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA384_HMAC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
 		.auth_mode = NSS_CRYPTOAPI_AUTH_MODE_HMAC,
 		.aead_tx_proc = nss_cryptoapi_aead_tx_proc,
@@ -815,6 +875,29 @@ struct aead_alg cryptoapi_aead_algs[] = {
 		.decrypt = nss_cryptoapi_aead_decrypt,
 	},
 	{	/*
+		 * sha384, aes-cbc
+		 */
+		.base = {
+			.cra_name = "echainiv(authenc(hmac(sha384),cbc(aes)))",
+			.cra_driver_name = "nss-hmac-sha384-cbc-aes",
+			.cra_priority = 10000,
+			.cra_flags = CRYPTO_ALG_ASYNC,
+			.cra_blocksize = AES_BLOCK_SIZE,
+			.cra_ctxsize = sizeof(struct nss_cryptoapi_ctx),
+			.cra_alignmask = 0,
+			.cra_module = THIS_MODULE,
+		},
+
+		.init = nss_cryptoapi_aead_init,
+		.exit = nss_cryptoapi_aead_exit,
+		.ivsize = AES_BLOCK_SIZE,
+		.maxauthsize = SHA384_DIGEST_SIZE,
+		.setkey = nss_cryptoapi_aead_setkey,
+		.setauthsize = nss_cryptoapi_aead_setauthsize,
+		.encrypt = nss_cryptoapi_aead_encrypt,
+		.decrypt = nss_cryptoapi_aead_decrypt,
+	},
+	{	/*
 		 * sha1, 3des
 		 */
 		.base = {
@@ -899,6 +982,29 @@ struct aead_alg cryptoapi_aead_algs[] = {
 		.exit = nss_cryptoapi_aead_exit,
 		.ivsize = AES_BLOCK_SIZE,
 		.maxauthsize = SHA256_DIGEST_SIZE,
+		.setkey = nss_cryptoapi_aead_setkey,
+		.setauthsize = nss_cryptoapi_aead_setauthsize,
+		.encrypt = nss_cryptoapi_aead_encrypt,
+		.decrypt = nss_cryptoapi_aead_decrypt,
+	},
+	{	/*
+		 * sha384, aes-cbc
+		 */
+		.base = {
+			.cra_name = "authenc(hmac(sha384),cbc(aes))",
+			.cra_driver_name = "nss-hmac-sha384-cbc-aes",
+			.cra_priority = 10000,
+			.cra_flags = CRYPTO_ALG_ASYNC,
+			.cra_blocksize = AES_BLOCK_SIZE,
+			.cra_ctxsize = sizeof(struct nss_cryptoapi_ctx),
+			.cra_alignmask = 0,
+			.cra_module = THIS_MODULE,
+		},
+
+		.init = nss_cryptoapi_aead_init,
+		.exit = nss_cryptoapi_aead_exit,
+		.ivsize = AES_BLOCK_SIZE,
+		.maxauthsize = SHA384_DIGEST_SIZE,
 		.setkey = nss_cryptoapi_aead_setkey,
 		.setauthsize = nss_cryptoapi_aead_setauthsize,
 		.encrypt = nss_cryptoapi_aead_encrypt,
