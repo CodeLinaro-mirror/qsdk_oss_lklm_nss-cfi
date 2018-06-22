@@ -1,4 +1,4 @@
-/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -29,6 +29,17 @@
  */
 int nss_cryptoapi_aead_ctx2session(struct crypto_aead *aead, uint32_t *sid);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+/**
+ * @brief Get the NSS crypto session ID corresponding to the skcipher
+ *
+ * @param sk[IN] Crypto skcipher
+ * @param sid[IN] Pointer to store the session ID
+ *
+ * @return 0 for success
+ */
+int nss_cryptoapi_skcipher_ctx2session(struct crypto_skcipher *sk, uint32_t *sid);
+#else
 /**
  * @brief Get the NSS crypto session ID corresponding to the ABLK cipher
  *
@@ -38,11 +49,12 @@ int nss_cryptoapi_aead_ctx2session(struct crypto_aead *aead, uint32_t *sid);
  * @return 0 for success
  */
 int nss_cryptoapi_ablk_ctx2session(struct crypto_ablkcipher *ablk, uint32_t *sid);
+#endif
 
 /**
  * @brief Get the NSS crypto session ID corresponding to AHASH
  *
- * @param ablk[IN] Crypto AHASH
+ * @param ahash[IN] Crypto AHASH
  * @param sid[IN] Pointer to store the session ID
  *
  * @return 0 for success
