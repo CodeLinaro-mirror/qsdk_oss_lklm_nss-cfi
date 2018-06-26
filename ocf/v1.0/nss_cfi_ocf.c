@@ -1,4 +1,4 @@
-/* Copyright (c) 2014,2015-2017 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014,2015-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -135,21 +135,10 @@ static int32_t nss_cfi_ocf_decrypt_trap(struct sk_buff *skb, uint32_t session_id
  */
 static bool nss_cfi_ocf_chk_skb_valid(struct sk_buff *skb)
 {
-	uint32_t tail_room = 0;
 
 	/* Skb fragmentation support unimplemented */
 	if (skb_shinfo(skb)->nr_frags || skb_has_frag_list(skb)) {
 		nss_cfi_err("SKB has fragments, crypto cannot process these buffers\n");
-		return false;
-	}
-
-	/*
-	 * Check if the data buffer has enough tailroom to accomodate the crypto information
-	 */
-	tail_room = skb_tailroom(skb);
-	if (tail_room < NSS_CRYPTO_BUF_TAILROOM ) {
-		nss_cfi_err("Buffer has insufficient tail room :%d required: %d\n",
-						tail_room, NSS_CRYPTO_BUF_TAILROOM);
 		return false;
 	}
 
