@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -65,12 +65,23 @@ struct nss_cryptoapi_ablk_info {
 int nss_cryptoapi_ablk_ctx2session(struct crypto_ablkcipher *ablk, uint32_t *sid)
 {
 	struct crypto_tfm *tfm = crypto_ablkcipher_tfm(ablk);
+	struct ablkcipher_tfm *crt = crypto_ablkcipher_crt(ablk);
+	struct crypto_ablkcipher *cipher = crt->base;
 	struct nss_cryptoapi_ctx *ctx;
 
 	if (strncmp("nss-", crypto_tfm_alg_driver_name(tfm), 4))
 		return -EINVAL;
 
-	ctx = crypto_ablkcipher_ctx(ablk);
+	/*
+	 * The ablkcipher passed to this API is wrapper around the actual
+	 * ablkcipher that is created when the ablkcipher is allocated.
+	 * Hence we derive the required ablkcipher through ablkcipher_tfm.
+	 */
+	ctx = crypto_ablkcipher_ctx(cipher);
+
+	BUG_ON(!ctx);
+	NSS_CRYPTOAPI_VERIFY_MAGIC(ctx);
+
 	*sid = ctx->sid;
 
 	return 0;

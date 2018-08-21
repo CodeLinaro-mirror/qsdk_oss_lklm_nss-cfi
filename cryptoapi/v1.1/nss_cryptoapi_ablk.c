@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -42,6 +42,7 @@
 #include <crypto/aead.h>
 #include <crypto/authenc.h>
 #include <crypto/scatterwalk.h>
+#include <crypto/internal/skcipher.h>
 
 #include <nss_api_if.h>
 #include <nss_crypto_if.h>
@@ -58,23 +59,47 @@ struct nss_cryptoapi_ablk_info {
 };
 
 /*
- * nss_cryptoapi_ablk_ctx2session()
- *	Cryptoapi function to get the session ID for an ablk cipher
+ * nss_cryptoapi_skcipher_ctx2session()
+ *	Cryptoapi function to get the session ID for an skcipher
  */
-int nss_cryptoapi_ablk_ctx2session(struct crypto_ablkcipher *ablk, uint32_t *sid)
+int nss_cryptoapi_skcipher_ctx2session(struct crypto_skcipher *sk, uint32_t *sid)
 {
-	struct crypto_tfm *tfm = crypto_ablkcipher_tfm(ablk);
+	struct crypto_tfm *tfm = crypto_skcipher_tfm(sk);
+	struct crypto_ablkcipher **actx, *ablk;
+	struct ablkcipher_tfm *ablk_tfm;
 	struct nss_cryptoapi_ctx *ctx;
 
 	if (strncmp("nss-", crypto_tfm_alg_driver_name(tfm), 4))
 		return -EINVAL;
 
-	ctx = crypto_ablkcipher_ctx(ablk);
-	*sid = ctx->sid;
+	/* Get the ablkcipher from the skcipher */
+	actx = crypto_skcipher_ctx(sk);
+	if (!actx || !(*actx))
+		return -EINVAL;
 
+	/*
+	 * The ablkcipher now obtained is a wrapper around the actual
+	 * ablkcipher that is created when the skcipher is created.
+	 * Hence we derive the required ablkcipher through ablkcipher_tfm.
+	 */
+	ablk_tfm = crypto_ablkcipher_crt(*actx);
+	if (!ablk_tfm)
+		return -EINVAL;
+
+	ablk = ablk_tfm->base;
+	if (!ablk)
+		return -EINVAL;
+
+	/* Get the nss_cryptoapi context stored in the ablkcipher */
+	ctx = crypto_ablkcipher_ctx(ablk);
+
+	nss_cfi_assert(ctx);
+	nss_cryptoapi_verify_magic(ctx);
+
+	*sid = ctx->sid;
 	return 0;
 }
-EXPORT_SYMBOL(nss_cryptoapi_ablk_ctx2session);
+EXPORT_SYMBOL(nss_cryptoapi_skcipher_ctx2session);
 
 /*
  * nss_cryptoapi_ablkcipher_init()
