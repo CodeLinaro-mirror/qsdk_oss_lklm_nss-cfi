@@ -43,6 +43,7 @@
 #include <crypto/aead.h>
 #include <crypto/authenc.h>
 #include <crypto/ctr.h>
+#include <crypto/internal/skcipher.h>
 
 #include <nss_api_if.h>
 #include <nss_crypto_cmn.h>
