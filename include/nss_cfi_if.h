@@ -136,7 +136,7 @@ static inline void nss_cfi_dbg_data(uint8_t *data, uint16_t len, uint8_t c)
 struct nss_cfi_crypto_info {
 	uint16_t sid;			/**< Crypto Session index */
 
-#if defined(NSS_CFI_IPQ807X_SUPPORT)
+#if defined(NSS_CFI_IPQ807X_SUPPORT) || defined(NSS_CFI_IPQ60XX_SUPPORT)
 	enum nss_crypto_cmn_algo algo;	/**< supported algorithm */
 	uint8_t pad[2];			/**< padding */
 #else
