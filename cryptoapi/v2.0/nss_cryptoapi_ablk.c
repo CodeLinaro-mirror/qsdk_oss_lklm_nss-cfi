@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -54,8 +54,18 @@
 extern struct nss_cryptoapi g_cryptoapi;
 
 /*
- * nss_cryptoapi_ablk_ctx2session()
- *	Cryptoapi function to get the session ID for an ablk cipher
+ * nss_cryptoapi_ablk_atomic_wait()
+ *	Cryptoapi atomic wait action API
+ */
+int nss_cryptoapi_ablk_atomic_wait(atomic_t *p)
+{
+	schedule();
+	return 0;
+}
+
+/*
+ * nss_cryptoapi_skcipher_ctx2session()
+ *	Cryptoapi function to get the session ID for an skcipher
  */
 int nss_cryptoapi_ablk_ctx2session(struct crypto_ablkcipher *ablk, uint32_t *sid)
 {
@@ -134,9 +144,17 @@ void nss_cryptoapi_ablkcipher_exit(struct crypto_tfm *tfm)
 	if (ctx->fallback_req)
 		return;
 
-	nss_crypto_session_free(ctx->user, ctx->sid);
-	debugfs_remove_recursive(ctx->dentry);
+	if (!atomic_read(&ctx->refcnt))
+		return;
 
+	if (!atomic_sub_and_test(1, &ctx->refcnt)) {
+		wait_on_atomic_t(&ctx->refcnt, nss_cryptoapi_ablk_atomic_wait, TASK_INTERRUPTIBLE);
+	}
+
+	nss_crypto_session_free(ctx->user, ctx->sid);
+	ctx->sid = NSS_CRYPTO_SESSION_MAX;
+
+	debugfs_remove_recursive(ctx->dentry);
 	NSS_CRYPTOAPI_CLEAR_MAGIC(ctx);
 }
 
@@ -212,6 +230,7 @@ int nss_cryptoapi_ablk_setkey(struct crypto_ablkcipher *cipher, const u8 *key, u
 	}
 
 	nss_cryptoapi_add_ctx2debugfs(ctx);
+	atomic_set(&ctx->refcnt, 1);
 	return 0;
 }
 
@@ -244,6 +263,9 @@ void nss_cryptoapi_ablkcipher_done(void *app_data, struct nss_crypto_hdr *ch, ui
 	 */
 	req->base.complete(&req->base, nss_cryptoapi_status2error(ctx, status));
 	ctx->stats.completed++;
+
+	BUG_ON(atomic_read(&ctx->refcnt) == 0);
+	atomic_dec(&ctx->refcnt);
 }
 
 /*
@@ -330,6 +352,9 @@ int nss_cryptoapi_ablk_encrypt(struct ablkcipher_request *req)
 
 	info.last_sg = cur;
 	info.ahash_skip = tot_len - req->nbytes;
+
+	if (!atomic_inc_not_zero(&ctx->refcnt))
+		return -ENOENT;
 
 	return nss_cryptoapi_transform(ctx, &info, (void *)req, false);
 }
@@ -420,6 +445,9 @@ int nss_cryptoapi_ablk_decrypt(struct ablkcipher_request *req)
 
 	info.ahash_skip = tot_len - req->nbytes;
 	info.last_sg = cur;
+
+	if (!atomic_inc_not_zero(&ctx->refcnt))
+		return -ENOENT;
 
 	return nss_cryptoapi_transform(ctx, &info, (void *)req, false);
 }
