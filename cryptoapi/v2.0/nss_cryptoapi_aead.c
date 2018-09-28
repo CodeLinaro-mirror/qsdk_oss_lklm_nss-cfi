@@ -182,7 +182,6 @@ int nss_cryptoapi_aead_setkey_noauth(struct crypto_aead *aead, const u8 *key, un
 
 	data.algo = ctx->info->algo;
 	data.cipher_key = key;
-	data.auth_key = NULL;
 	data.sec_key = false;
 	data.nonce = nonce;
 
@@ -223,7 +222,7 @@ int nss_cryptoapi_aead_setkey(struct crypto_aead *aead, const u8 *key, unsigned 
 		return -EIO;
 	}
 
-	ctx->info = nss_cryptoapi_cra_name2info(crypto_tfm_alg_name(tfm), keys.enckeylen, keys.authkeylen);
+	ctx->info = nss_cryptoapi_cra_name2info(crypto_tfm_alg_name(tfm), keys.enckeylen, crypto_aead_maxauthsize(aead));
 	if (!ctx->info) {
 		nss_cfi_err("%p: Unable to find algorithm with keylen\n", ctx);
 		crypto_aead_set_flags(aead, CRYPTO_TFM_RES_BAD_KEY_LEN);
@@ -245,7 +244,7 @@ int nss_cryptoapi_aead_setkey(struct crypto_aead *aead, const u8 *key, unsigned 
 	/*
 	 * Validate if auth key length exceeds what we support
 	 */
-	if (keys.authkeylen > ctx->info->auth_keylen) {
+	if (keys.authkeylen > ctx->info->auth_blocksize) {
 		nss_cfi_err("%p: Auth keylen(%d) exceeds supported\n", ctx, keys.authkeylen);
 		crypto_aead_set_flags(aead, CRYPTO_TFM_RES_BAD_KEY_LEN);
 		return -EINVAL;
@@ -278,6 +277,7 @@ int nss_cryptoapi_aead_setkey(struct crypto_aead *aead, const u8 *key, unsigned 
 	data.algo = ctx->info->algo;
 	data.cipher_key = keys.enckey;
 	data.auth_key = keys.authkey;
+	data.auth_keylen = keys.authkeylen;
 	data.sec_key = false;
 
 	status = nss_crypto_session_alloc(ctx->user, &data, &ctx->sid);
