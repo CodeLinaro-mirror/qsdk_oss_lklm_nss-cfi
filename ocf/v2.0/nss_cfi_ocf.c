@@ -261,6 +261,8 @@ static int nss_cfi_ocf_newsession(device_t dev, uint32_t *sidp, struct cryptoini
 	switch (cri->cri_alg) {
 	case CRYPTO_SHA1_HMAC:
 		auth_ini = cri;
+		auth_ini->cri_klen = NSS_CFI_OCF_BITS2BYTES(auth_ini->cri_klen); /* Convert len in bits to bytes */
+
 		cip_ini = cri->cri_next;
 
 		if (!cip_ini)
@@ -293,6 +295,7 @@ static int nss_cfi_ocf_newsession(device_t dev, uint32_t *sidp, struct cryptoini
 
 	if (auth_ini) {
 		session_data.auth_key = auth_ini->cri_key;
+		session_data.auth_keylen = auth_ini->cri_klen;
 		cfi_crypto.hash_len = cfi_algo[alg].max_hashlen;
 	}
 
