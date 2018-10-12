@@ -34,6 +34,8 @@
 #define NSS_CRYPTOAPI_TIMEOUT 10 /* seconds */
 #define NSS_CRYPTOAPI_MAX_IV (AES_BLOCK_SIZE/sizeof(uint32_t))
 
+#define NSS_CRYPTOAPI_TIMEO_TICKS msecs_to_jiffies(3000) /* milliseconds */
+
 /*
  * Cipher mode
  */
@@ -112,6 +114,8 @@ struct nss_cryptoapi_ctx {
 	struct dentry *dentry;			/* Debugfs entry */
 	struct nss_crypto_user *user;		/* Crypto user */
 	struct crypto_tfm *sw_tfm;		/* SW fallback context */
+
+	atomic_t refcnt;			/* ctx refcnt */
 
 	uint32_t sid;				/* Session index */
 	uint32_t ctx_iv[NSS_CRYPTOAPI_MAX_IV];	/* Initial IV for the context */

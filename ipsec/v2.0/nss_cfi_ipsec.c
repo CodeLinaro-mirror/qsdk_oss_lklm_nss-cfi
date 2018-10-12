@@ -345,6 +345,9 @@ static void *nss_cfi_ipsec_fill_flow_outer(uint8_t *ip_start, uint8_t iv_len, bo
 		outer->src_ip[0] = ntohl(iph->saddr);
 		outer->dest_ip[0] = ntohl(iph->daddr);
 		outer->spi_index = ntohl(esp->spi);
+		outer->sport = natt ? NSS_IPSECMGR_NATT_PORT_DATA : 0;
+		outer->dport = natt ? NSS_IPSECMGR_NATT_PORT_DATA : 0;
+		outer->proto_next_hdr = natt ? IPPROTO_UDP : IPPROTO_ESP;
 		outer->ip_version = IPVERSION;
 		*ttl_hop_limit = iph->ttl;
 
@@ -357,6 +360,7 @@ static void *nss_cfi_ipsec_fill_flow_outer(uint8_t *ip_start, uint8_t iv_len, bo
 
 		esp = (struct ip_esp_hdr *)(ip_start + sizeof(*ip6h));
 		outer->spi_index = ntohl(esp->spi);
+		outer->proto_next_hdr = IPPROTO_ESP;
 		outer->ip_version = 6;
 		*ttl_hop_limit = ip6h->hop_limit;
 

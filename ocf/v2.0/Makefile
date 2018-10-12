@@ -17,3 +17,7 @@ ccflags-y += -Werror
 ifneq (, $(findstring ipq807x, $(SoC)))
 ccflags-y += -DNSS_CFI_IPQ807X_SUPPORT
 endif
+
+ifneq (, $(findstring ipq60xx, $(SoC)))
+ccflags-y += -DNSS_CFI_IPQ60XX_SUPPORT
+endif
