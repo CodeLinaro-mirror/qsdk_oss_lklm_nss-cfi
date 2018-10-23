@@ -1213,10 +1213,8 @@ int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_
 	 * of HMAC inside the packet length. Restore the length after
 	 * mapping is done.
 	 */
-	info->last_sg->length -= info->ahash_skip;
 	if (unlikely(ahash)) {
 		nss_crypto_hdr_map_sglist_ahash(ch, info->first_sg);
-		info->last_sg->length += info->ahash_skip;
 
 		/*
 		 * Skip IV since this is ahash
@@ -1224,8 +1222,7 @@ int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_
 		goto skip_iv;
 	}
 
-	nss_crypto_hdr_map_sglist(ch, info->first_sg);
-	info->last_sg->length += info->ahash_skip;
+	nss_crypto_hdr_map_sglist(ch, info->first_sg, info->ahash_skip);
 
 	/*
 	 * Get IV location and memcpy the IV
