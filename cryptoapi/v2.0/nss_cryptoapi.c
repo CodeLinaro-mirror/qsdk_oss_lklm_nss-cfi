@@ -1231,7 +1231,7 @@ int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_
 	 * mapping is done.
 	 */
 	if (unlikely(ahash)) {
-		nss_crypto_hdr_map_sglist_ahash(ch, info->first_sg);
+		nss_crypto_hdr_map_sglist_ahash(ch, info->first_sg, info->ahash_skip);
 
 		/*
 		 * Skip IV since this is ahash
