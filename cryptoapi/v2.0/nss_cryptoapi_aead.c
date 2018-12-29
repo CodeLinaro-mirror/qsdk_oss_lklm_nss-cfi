@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -145,14 +145,20 @@ void nss_cryptoapi_aead_exit(struct crypto_aead *aead)
 	if (ctx->fallback_req)
 		return;
 
-	if (!atomic_read(&ctx->refcnt))
+	if (!atomic_read(&ctx->active))
 		return;
+
+	/*
+	 * Mark cryptoapi context as inactive
+	 */
+	atomic_set(&ctx->active, 0);
+
+	nss_crypto_session_free(ctx->user, ctx->sid);
 
 	if (!atomic_sub_and_test(1, &ctx->refcnt)) {
 		wait_on_atomic_t(&ctx->refcnt, nss_cryptoapi_aead_atomic_wait, TASK_INTERRUPTIBLE);
 	}
 
-	nss_crypto_session_free(ctx->user, ctx->sid);
 	ctx->sid = NSS_CRYPTO_SESSION_MAX;
 
 	debugfs_remove_recursive(ctx->dentry);
@@ -211,6 +217,7 @@ int nss_cryptoapi_aead_setkey_noauth(struct crypto_aead *aead, const u8 *key, un
 	}
 
 	nss_cryptoapi_add_ctx2debugfs(ctx);
+	atomic_set(&ctx->active, 1);
 	atomic_set(&ctx->refcnt, 1);
 	return 0;
 }
@@ -307,6 +314,7 @@ int nss_cryptoapi_aead_setkey(struct crypto_aead *aead, const u8 *key, unsigned 
 	}
 
 	nss_cryptoapi_add_ctx2debugfs(ctx);
+	atomic_set(&ctx->active, 1);
 	atomic_set(&ctx->refcnt, 1);
 	return 0;
 }
@@ -355,8 +363,10 @@ void nss_cryptoapi_aead_done(void *app_data, struct nss_crypto_hdr *ch, uint8_t 
 	aead_request_complete(req, nss_cryptoapi_status2error(ctx, status));
 	ctx->stats.completed++;
 
-	BUG_ON(atomic_read(&ctx->refcnt) == 0);
-	atomic_dec(&ctx->refcnt);
+	/*
+	 * Decrement cryptoapi reference
+	 */
+	nss_cryptoapi_ref_dec(ctx);
 }
 
 /*
@@ -478,6 +488,12 @@ int nss_cryptoapi_aead_encrypt(struct aead_request *req)
 		return error;
 	}
 
+	/*
+	 * Check if cryptoapi context is active or not
+	 */
+	if (!atomic_read(&ctx->active))
+		return -EINVAL;
+
 	if (req->src != req->dst) {
 		ctx->stats.failed_req++;
 		return -EINVAL;
@@ -522,6 +538,12 @@ int nss_cryptoapi_aead_decrypt(struct aead_request *req)
 		aead_request_set_tfm(req, orig_tfm);
 		return error;
 	}
+
+	/*
+	 * Check if cryptoapi context is active or not
+	 */
+	if (!atomic_read(&ctx->active))
+		return -EINVAL;
 
 	if (req->src != req->dst) {
 		ctx->stats.failed_req++;

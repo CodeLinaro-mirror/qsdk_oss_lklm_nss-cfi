@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -115,6 +115,7 @@ struct nss_cryptoapi_ctx {
 	struct nss_crypto_user *user;		/* Crypto user */
 	struct crypto_tfm *sw_tfm;		/* SW fallback context */
 
+	atomic_t active;			/* ctx status(active/inactive) */
 	atomic_t refcnt;			/* ctx refcnt */
 
 	uint32_t sid;				/* Session index */
@@ -204,6 +205,7 @@ static inline void nss_cryptoapi_clear_magic(struct nss_cryptoapi_ctx *ctx)
  * function prototypes
  */
 extern struct nss_cryptoapi g_cryptoapi;
+extern void nss_cryptoapi_ref_dec(struct nss_cryptoapi_ctx *ctx);
 extern int nss_cryptoapi_status2error(struct nss_cryptoapi_ctx *ctx, uint8_t status);
 extern struct nss_cryptoapi_algo_info *nss_cryptoapi_cra_name2info(const char *cra_name, uint16_t enc_keylen, uint16_t digest_sz);
 extern int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_info *info, void *app_data, bool ahash);

@@ -1108,6 +1108,16 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 };
 
 /*
+ * nss_cryptoapi_ref_dec()
+ *	Decrement cryptoapi context reference
+ */
+void nss_cryptoapi_ref_dec(struct nss_cryptoapi_ctx *ctx)
+{
+	BUG_ON(atomic_read(&ctx->refcnt) == 0);
+	atomic_dec(&ctx->refcnt);
+}
+
+/*
  * nss_cryptoapi_cra_name2info()
  *     Lookup the associated algorithm in NSS for the given transformation
  */
@@ -1183,6 +1193,10 @@ int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_
 	ch = nss_crypto_hdr_alloc(ctx->user, ctx->sid, info->nsegs, info->iv_size, info->hmac_len, ahash);
 	if (!ch) {
 		ctx->stats.failed_nomem++;
+		/*
+		 * Decrement cryptoapi context reference
+		 */
+		nss_cryptoapi_ref_dec(ctx);
 		return -ENOMEM;
 	}
 
@@ -1258,6 +1272,10 @@ skip_iv:
 	 */
 	error = nss_crypto_transform_payload(ctx->user, ch, info->cb, app_data);
 	if (error < 0) {
+		/*
+		 * Decrement cryptoapi reference
+		 */
+		nss_cryptoapi_ref_dec(ctx);
 		nss_crypto_hdr_free(ctx->user, ch);
 		ctx->stats.failed_queue++;
 		return error;
