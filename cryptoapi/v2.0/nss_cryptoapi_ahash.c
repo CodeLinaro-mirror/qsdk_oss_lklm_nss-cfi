@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2018 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -144,14 +144,20 @@ void nss_cryptoapi_ahash_cra_exit(struct crypto_tfm *tfm)
 	BUG_ON(!ctx);
 	NSS_CRYPTOAPI_VERIFY_MAGIC(ctx);
 
-	if (!atomic_read(&ctx->refcnt))
+	if (!atomic_read(&ctx->active))
 		return;
+
+	/*
+	 * Mark cryptoapi context as inactive
+	 */
+	atomic_set(&ctx->active, 0);
+
+	nss_crypto_session_free(ctx->user, ctx->sid);
 
 	if (!atomic_sub_and_test(1, &ctx->refcnt)) {
 		wait_on_atomic_t(&ctx->refcnt, nss_cryptoapi_ahash_atomic_wait, TASK_INTERRUPTIBLE);
 	}
 
-	nss_crypto_session_free(ctx->user, ctx->sid);
 	ctx->sid = NSS_CRYPTO_SESSION_MAX;
 
 	debugfs_remove_recursive(ctx->dentry);
@@ -198,6 +204,7 @@ int nss_cryptoapi_ahash_setkey(struct crypto_ahash *ahash, const u8 *key, unsign
 	}
 
 	nss_cryptoapi_add_ctx2debugfs(ctx);
+	atomic_set(&ctx->active, 1);
 	atomic_set(&ctx->refcnt, 1);
 
 	return 0;
@@ -241,8 +248,11 @@ void nss_cryptoapi_ahash_done(void *app_data, struct nss_crypto_hdr *ch, uint8_t
 	 */
 	req->base.complete(&req->base, nss_cryptoapi_status2error(ctx, status));
 	ctx->stats.completed++;
-	BUG_ON(atomic_read(&ctx->refcnt) == 0);
-	atomic_dec(&ctx->refcnt);
+
+	/*
+	 * Decrement cryptoapi reference
+	 */
+	nss_cryptoapi_ref_dec(ctx);
 }
 
 /*
@@ -291,6 +301,7 @@ int nss_cryptoapi_ahash_init(struct ahash_request *req)
 		}
 
 		nss_cryptoapi_add_ctx2debugfs(ctx);
+		atomic_set(&ctx->active, 1);
 		atomic_set(&ctx->refcnt, 1);
 	}
 
@@ -327,6 +338,12 @@ int nss_cryptoapi_ahash_update(struct ahash_request *req)
 	 */
 	NSS_CRYPTOAPI_VERIFY_MAGIC(ctx);
 	NSS_CRYPTOAPI_AHASH_VERIFY_MAGIC(rctx);
+
+	/*
+	 * Check if cryptoapi context is active or not
+	 */
+	if (!atomic_read(&ctx->active))
+		return -EINVAL;
 
 	/*
 	 * .update can only be called one time for one request
