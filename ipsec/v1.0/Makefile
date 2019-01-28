@@ -10,3 +10,4 @@ ccflags-y += -I$(obj)/../../include
 ccflags-y += -I$(obj)/
 ccflags-y += -DNSS_CFI_DEBUG_LEVEL=3
 ccflags-y += -DNSS_CFI_BUILD_ID="$(BUILD_ID)"
+ccflags-y += -Werror

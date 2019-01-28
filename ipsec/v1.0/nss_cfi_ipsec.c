@@ -158,8 +158,6 @@ static int32_t nss_cfi_ipsec_get_iv_len(enum nss_crypto_cmn_algo algo)
 
 static int32_t nss_cfi_ipsec_get_iv_len(uint32_t algo)
 {
-	int result = -1;
-
 	switch (algo) {
 	case NSS_CRYPTO_CIPHER_AES_CBC:
 	case NSS_CRYPTO_CIPHER_AES_CTR:
@@ -323,7 +321,7 @@ static void *nss_cfi_ipsec_fill_v4_sa(struct sk_buff *skb, struct nss_ipsecmgr_s
 	esp = ip_esp_hdr(skb);
 
 	if ((iph->protocol == IPPROTO_UDP) && (udp->dest == NSS_IPSECMGR_NATT_PORT_DATA))
-		esp = (uint8_t *)udp + sizeof(*udp);
+		esp = (struct ip_esp_hdr *)((uint8_t *)udp + sizeof(*udp));
 
 	sa->type = NSS_IPSECMGR_SA_TYPE_V4;
 	sa_v4 = &sa->data.v4;
