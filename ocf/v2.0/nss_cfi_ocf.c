@@ -1,4 +1,4 @@
-/* Copyright (c) 2014 - 2019 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014 - 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -42,6 +42,7 @@
 #include <crypto/aes.h>
 #include <crypto/des.h>
 #include <crypto/sha.h>
+#include <crypto/md5.h>
 #include <cryptodev.h>
 
 #include <nss_api_if.h>
@@ -70,6 +71,14 @@ static struct nss_cfi_ocf_algo_map cfi_algo[NSS_CRYPTO_CMN_ALGO_MAX] = {
 								SHA1_DIGEST_SIZE,
 								1,
 			   				},
+	[NSS_CRYPTO_CMN_ALGO_AES192_CBC_SHA160_HMAC] =	{
+								{CRYPTO_AES_CBC, CRYPTO_SHA1_HMAC},
+								AES_KEYSIZE_192,
+								AES_BLOCK_SIZE,
+								AES_BLOCK_SIZE,
+								SHA1_DIGEST_SIZE,
+								1,
+			   				},
 	[NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA160_HMAC] =	{
 								{CRYPTO_AES_CBC, CRYPTO_SHA1_HMAC},
 								AES_KEYSIZE_256,
@@ -86,6 +95,38 @@ static struct nss_cfi_ocf_algo_map cfi_algo[NSS_CRYPTO_CMN_ALGO_MAX] = {
 								SHA1_DIGEST_SIZE,
 								1,
 							},
+	[NSS_CRYPTO_CMN_ALGO_AES128_CBC_MD5_HMAC] =	{
+								{CRYPTO_AES_CBC, CRYPTO_MD5_HMAC},
+								AES_KEYSIZE_128,
+								AES_BLOCK_SIZE,
+								AES_BLOCK_SIZE,
+								MD5_DIGEST_SIZE,
+								1,
+			   				},
+	[NSS_CRYPTO_CMN_ALGO_AES192_CBC_MD5_HMAC] =	{
+								{CRYPTO_AES_CBC, CRYPTO_MD5_HMAC},
+								AES_KEYSIZE_192,
+								AES_BLOCK_SIZE,
+								AES_BLOCK_SIZE,
+								MD5_DIGEST_SIZE,
+								1,
+			   				},
+	[NSS_CRYPTO_CMN_ALGO_AES256_CBC_MD5_HMAC] =	{
+								{CRYPTO_AES_CBC, CRYPTO_MD5_HMAC},
+								AES_KEYSIZE_256,
+								AES_BLOCK_SIZE,
+								AES_BLOCK_SIZE,
+								MD5_DIGEST_SIZE,
+								1,
+							},
+	[NSS_CRYPTO_CMN_ALGO_3DES_CBC_MD5_HMAC] =	{
+								{CRYPTO_3DES_CBC, CRYPTO_MD5_HMAC},
+								DES3_EDE_KEY_SIZE,
+								DES_BLOCK_SIZE,
+								DES3_EDE_BLOCK_SIZE,
+								MD5_DIGEST_SIZE,
+								1,
+							},
 	[NSS_CRYPTO_CMN_ALGO_3DES_CBC] =		{
 								{CRYPTO_3DES_CBC, 0},
 								DES3_EDE_KEY_SIZE,
@@ -97,6 +138,14 @@ static struct nss_cfi_ocf_algo_map cfi_algo[NSS_CRYPTO_CMN_ALGO_MAX] = {
 	[NSS_CRYPTO_CMN_ALGO_AES128_CBC] =		{
 								{CRYPTO_AES_CBC, 0},
 								AES_KEYSIZE_128,
+								AES_BLOCK_SIZE,
+								AES_BLOCK_SIZE,
+								0,
+								1,
+			   				},
+	[NSS_CRYPTO_CMN_ALGO_AES192_CBC] =		{
+								{CRYPTO_AES_CBC, 0},
+								AES_KEYSIZE_192,
 								AES_BLOCK_SIZE,
 								AES_BLOCK_SIZE,
 								0,
@@ -116,6 +165,14 @@ static struct nss_cfi_ocf_algo_map cfi_algo[NSS_CRYPTO_CMN_ALGO_MAX] = {
 								0,
 							 	0,
 								SHA1_DIGEST_SIZE,
+								1,
+							},
+	[NSS_CRYPTO_CMN_ALGO_MD5_HMAC] =		{
+								{CRYPTO_MD5_HMAC, 0},
+								0,
+								0,
+							 	0,
+								MD5_DIGEST_SIZE,
 								1,
 							},
 };
@@ -167,75 +224,76 @@ static struct sk_buff *nss_cfi_ocf_get_skb(struct cryptop *crp)
 }
 
 /*
+ * nss_cfi_ocf_cri2algo_aead()
+ *	Gets an algorith number based on algos filled in cri for aead
+ */
+enum nss_crypto_cmn_algo nss_cfi_ocf_cri2algo_aead(struct cryptoini *cri)
+{
+	struct nss_cfi_ocf_algo_map *map = &cfi_algo[0];
+	enum nss_crypto_cmn_algo algo;
+	int cri_alg, cri_next_alg;
+	int cipher_alg, auth_alg;
+	int ckey_len, akey_len;
+
+	BUG_ON(!cri->cri_next);
+
+	cri_alg = cri->cri_alg;
+	cri_next_alg = cri->cri_next->cri_alg;
+
+	for (algo = 0; algo < NSS_CRYPTO_CMN_ALGO_MAX; algo++, map++) {
+		cipher_alg = map->algo[0];
+		auth_alg = map->algo[1];
+
+		/*
+		 * Skip non-AEAD algorithms
+		 */
+		if (!cipher_alg || !auth_alg) {
+			continue;
+		}
+
+		/*
+		 * Test whether AEAD is
+		 * a) encrytion followed by authentication or
+		 * b) authentication followed by decryption
+		 */
+		if ((cipher_alg == cri_alg) && (auth_alg == cri_next_alg)) {
+			ckey_len = NSS_CFI_OCF_BITS2BYTES(cri->cri_klen);
+			akey_len = NSS_CFI_OCF_BITS2BYTES(cri->cri_next->cri_klen);
+		} else if ((auth_alg == cri_alg) && (cipher_alg == cri_next_alg)) {
+			akey_len = NSS_CFI_OCF_BITS2BYTES(cri->cri_klen);
+			ckey_len = NSS_CFI_OCF_BITS2BYTES(cri->cri_next->cri_klen);
+		} else {
+			continue;
+		}
+
+		if ((map->max_keylen == ckey_len) && (map->max_hashlen == akey_len)) {
+			return algo;
+		}
+	}
+
+	return NSS_CRYPTO_CMN_ALGO_MAX;
+}
+
+/*
  * nss_cfi_ocf_cri2algo()
  *	Gets an algorith number based on algos filled in cri
  */
 enum nss_crypto_cmn_algo nss_cfi_ocf_cri2algo(struct cryptoini *cri)
 {
-	int cri_algo_first = cri->cri_alg;
-	int cfi_algo_first, cfi_algo_next;
+	struct nss_cfi_ocf_algo_map *map = &cfi_algo[0];
 	enum nss_crypto_cmn_algo algo;
-	int cri_algo_next;
+
+	if (cri->cri_next) {
+		return nss_cfi_ocf_cri2algo_aead(cri);
+	}
 
 	/*
-	 * Here the idea is to take the algo information passed
-	 * by openswann and match it with the prepopulated
-	 * structure 'nss_cfi_ocf_algo_map'. If the first and the
-	 * next from cri matches first and next in cfi structure
-	 * then we return the algorithm
+	 * Only for non-AEAD algorithms
 	 */
-	for (algo = 0; algo < NSS_CRYPTO_CMN_ALGO_MAX; algo++) {
-		cfi_algo_first = cfi_algo[algo].algo[0];
-		cfi_algo_next = cfi_algo[algo].algo[1];
-
-		switch (algo) {
-		case NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA160_HMAC:
-		case NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA160_HMAC:
-			cri_algo_next = cri->cri_next->cri_alg;
-
-			if ((cri_algo_first != cfi_algo_first) && (cri_algo_first != cfi_algo_next))
-				break;
-
-			if ((cri_algo_next != cfi_algo_next) && (cri_algo_next != cfi_algo_first))
-				break;
-
-			if (NSS_CFI_OCF_BITS2BYTES(cri->cri_klen) == AES_KEYSIZE_128)
-				return NSS_CRYPTO_CMN_ALGO_AES128_CBC_SHA160_HMAC;
-			else if (NSS_CFI_OCF_BITS2BYTES(cri->cri_klen) == AES_KEYSIZE_256)
-				return NSS_CRYPTO_CMN_ALGO_AES256_CBC_SHA160_HMAC;
-
-		case NSS_CRYPTO_CMN_ALGO_3DES_CBC_SHA160_HMAC:
-			cri_algo_next = cri->cri_next->cri_alg;
-
-			if ((cri_algo_first != cfi_algo_first) && (cri_algo_first != cfi_algo_next))
-				break;
-
-			if ((cri_algo_next != cfi_algo_next) && (cri_algo_next != cfi_algo_first))
-				break;
-
+	for (algo = 0; algo < NSS_CRYPTO_CMN_ALGO_MAX; algo++, map++) {
+		if (!map->algo[1] && (map->algo[0] == cri->cri_alg)) {
 			return algo;
-
-		case NSS_CRYPTO_CMN_ALGO_AES128_CBC:
-		case NSS_CRYPTO_CMN_ALGO_AES256_CBC:
-		case NSS_CRYPTO_CMN_ALGO_3DES_CBC:
-		case NSS_CRYPTO_CMN_ALGO_SHA160_HMAC:
-			if (cri_algo_first != cfi_algo_first)
-				break;
-
-			if (cri->cri_next)
-				break;
-
-			return algo;
-
-		default:
-			break;
 		}
-
-		if (algo == NSS_CRYPTO_CMN_ALGO_MAX) {
-			nss_cfi_err("%p: algorithm not supported(%d)\n", cri, algo);
-			return NSS_CRYPTO_CMN_ALGO_MAX;
-		}
-		continue;
 	}
 
 	return NSS_CRYPTO_CMN_ALGO_MAX;
@@ -267,6 +325,7 @@ static int nss_cfi_ocf_newsession(device_t dev, uint32_t *sidp, struct cryptoini
 	memset(&session_data, 0, sizeof(struct nss_crypto_session_data));
 
 	switch (cri->cri_alg) {
+	case CRYPTO_MD5_HMAC:
 	case CRYPTO_SHA1_HMAC:
 		auth_ini = cri;
 		auth_ini->cri_klen = NSS_CFI_OCF_BITS2BYTES(auth_ini->cri_klen); /* Convert len in bits to bytes */
@@ -380,6 +439,7 @@ static void nss_cfi_ocf_process_done(void *app_data, struct nss_crypto_hdr *ch, 
 
 	switch (crd->crd_alg) {
 	case CRYPTO_SHA1_HMAC:
+	case CRYPTO_MD5_HMAC:
 		auth_crd = crd;
 		cip_crd  = crd->crd_next;
 
@@ -475,6 +535,7 @@ static int nss_cfi_ocf_process(device_t dev, struct cryptop *crp, int hint)
 	nss_cfi_assert(crd);
 
 	switch (crd->crd_alg) {
+	case CRYPTO_MD5_HMAC:
 	case CRYPTO_SHA1_HMAC:
 		auth_crd = crd;
 		cip_crd  = crd->crd_next;
@@ -643,6 +704,7 @@ void nss_cfi_ocf_register(void *app_data, struct nss_crypto_user *user)
 	crypto_register(sc->cid, CRYPTO_AES_CBC, 0, 0);
 	crypto_register(sc->cid, CRYPTO_3DES_CBC, 0, 0);
 	crypto_register(sc->cid, CRYPTO_SHA1_HMAC, 0, 0);
+	crypto_register(sc->cid, CRYPTO_MD5_HMAC, 0, 0);
 }
 
 /*
