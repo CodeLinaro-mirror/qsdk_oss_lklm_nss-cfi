@@ -76,11 +76,6 @@ struct nss_cryptoapi {
  */
 struct nss_cryptoapi_req_ctx {
 	uint64_t msg_count;				/* Message count for this context */
-	union {
-		struct sha1_state sha1;
-		struct sha256_state sha256;
-		struct sha512_state sha384;
-	} state;					/* States for SHA modes */
 
 	enum nss_cryptoapi_auth_mode auth_mode;		/* Auth mode */
 	struct nss_cryptoapi_algo_info *info;		/* Algorithm specific info */
