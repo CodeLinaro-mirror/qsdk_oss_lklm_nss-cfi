@@ -1,4 +1,4 @@
-/* Copyright (c) 2014 - 2017 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014 - 2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -316,11 +316,19 @@ static int nss_cfi_ocf_newsession(device_t dev, uint32_t *sidp, struct cryptoini
 	 * get back the algo
 	 */
 	*sidp = NSS_CFI_OCF_SESSION(session);
+
+	/*
+	 * Check if the index returned is within the bounds
+	 */
 	cfi_crypto.sid = *sidp;
+	if (cfi_crypto.sid >= NSS_CRYPTO_MAX_IDXS) {
+		nss_crypto_session_free(sc->crypto, cfi_crypto.sid);
+		return E2BIG;
+	}
+
 	*sidp |= NSS_CFI_OCF_ALGO_SHIFT(alg);
 
 	memcpy(&gbl_crypto_info[cfi_crypto.sid], &cfi_crypto, sizeof(struct nss_cfi_crypto_info));
-
 	return 0;
 }
 
@@ -336,9 +344,9 @@ static int nss_cfi_ocf_freesession(device_t dev, uint64_t tid)
 	sc->session_fn(sid);
 
 	memset(&gbl_crypto_info[idx], 0, sizeof(struct nss_cfi_crypto_info));
-	nss_cfi_info("freeing index %d\n",idx);
+	nss_cfi_info("freeing index = %d, sid = %d\n",idx, sid);
 
-	nss_crypto_session_free(sc->crypto, sid);
+	nss_crypto_session_free(sc->crypto, idx);
 
 	return 0;
 }
@@ -517,8 +525,7 @@ static int nss_cfi_ocf_process(device_t dev, struct cryptop *crp, int hint)
 		iv_addr = nss_crypto_hdr_get_iv(ch);
 		memcpy(iv_addr, skb->data + cip_crd->crd_inject, ivsize);
 
-
-		nss_cfi_dbg("encrypt=%d\t decrypt=%d\t cipher len %d cipher skip %d  cip_crd->crd_inject=%d iv_addr %p\n",
+		nss_cfi_dbg("enc=(%d), dec=(%d), ciph_len(%d), ciph_skip(%d), inject(%d), iv_addr(%p)\n",
 				encrypt, decrypt, cipher_len, cip_crd->crd_skip, cip_crd->crd_inject, iv_addr);
 	}
 
@@ -648,7 +655,6 @@ void nss_cfi_ocf_unregister_ipsec(void)
 	nss_cfi_data_trap_t encrypt;
 	nss_cfi_data_trap_t decrypt;
 	nss_cfi_session_trap_t session;
-
 
 	nss_cfi_info("Unregistering IPsec trap handlers\n");
 
