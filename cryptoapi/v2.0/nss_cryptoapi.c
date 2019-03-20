@@ -1315,6 +1315,11 @@ ssize_t nss_cryptoapi_ctx_stats_read(struct file *fp, char __user *ubuf, size_t 
 	 */
 	len = snprintf(buf, max_buf_len, "queued - %llu\n", stats->queued);
 	len += snprintf(buf + len, max_buf_len - len, "completed - %llu\n", stats->completed);
+	len += snprintf(buf + len, max_buf_len - len, "init - %llu\n", stats->init);
+	len += snprintf(buf + len, max_buf_len - len, "exit - %llu\n", stats->exit);
+	len += snprintf(buf + len, max_buf_len - len, "failed_init - %llu\n", stats->failed_init);
+	len += snprintf(buf + len, max_buf_len - len, "failed_exit - %llu\n", stats->failed_exit);
+	len += snprintf(buf + len, max_buf_len - len, "failed_fallback - %llu\n", stats->failed_fallback);
 	len += snprintf(buf + len, max_buf_len - len, "failed_queue - %llu\n", stats->failed_queue);
 	len += snprintf(buf + len, max_buf_len - len, "failed_nomem - %llu\n", stats->failed_nomem);
 	len += snprintf(buf + len, max_buf_len - len, "failed_req - %llu\n", stats->failed_req);
