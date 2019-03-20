@@ -93,6 +93,11 @@ struct nss_cryptoapi_req_ctx {
 struct nss_cryptoapi_stats {
 	uint64_t queued;				/* Packets queued for completion */
 	uint64_t completed;				/* Packet completed */
+	uint64_t init;					/* Init invoked */
+	uint64_t exit;					/* Exit invoked */
+	uint64_t failed_init;				/* Init failed */
+	uint64_t failed_exit;				/* Exit failed */
+	uint64_t failed_fallback;			/* Fallback */
 	uint64_t failed_queue;				/* Packets failing enqueue */
 	uint64_t failed_nomem;				/* Packets failing due to no memory */
 	uint64_t failed_req;				/* Packets failing due incorrect request */
