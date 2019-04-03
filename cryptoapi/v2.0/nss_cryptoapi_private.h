@@ -31,7 +31,7 @@
 #define NSS_CRYPTOAPI_AHASH_MAGIC 0x7FEF
 #define NSS_CRYPTOAPI_HDR_POOL_SZ 1024
 #define NSS_CRYPTOAPI_DEFAULT_HDR_SZ 512
-#define NSS_CRYPTOAPI_TIMEOUT 10 /* seconds */
+#define NSS_CRYPTOAPI_TIMEOUT 100 /* msecs */
 #define NSS_CRYPTOAPI_MAX_IV (AES_BLOCK_SIZE/sizeof(uint32_t))
 
 #define NSS_CRYPTOAPI_TIMEO_TICKS msecs_to_jiffies(3000) /* milliseconds */
