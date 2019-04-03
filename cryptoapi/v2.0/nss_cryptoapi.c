@@ -69,7 +69,7 @@ MODULE_PARM_DESC(enable_ahash, "Enable Cryptoapi AHASH support");
 
 static int free_timeout = NSS_CRYPTOAPI_TIMEOUT;
 module_param(free_timeout, int, 0644);
-MODULE_PARM_DESC(free_timeout, "Max Timeout for Crypto session deallocation in seconds");
+MODULE_PARM_DESC(free_timeout, "Timeout (msecs) for delayed session free; due to outstanding requests");
 
 struct nss_cryptoapi_algo_info g_algo_info[] = {
 	/*
@@ -1549,7 +1549,7 @@ int nss_cryptoapi_init(void)
 	/*
 	 * Fill context free timeout
 	 */
-	g_cryptoapi.ctx.timeout_ticks = msecs_to_jiffies(free_timeout * MSEC_PER_SEC);
+	g_cryptoapi.ctx.timeout_ticks = msecs_to_jiffies(free_timeout);
 
 	atomic_set(&g_cryptoapi.registered, 0);
 
