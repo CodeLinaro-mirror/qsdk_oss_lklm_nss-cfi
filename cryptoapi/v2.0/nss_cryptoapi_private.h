@@ -33,8 +33,7 @@
 #define NSS_CRYPTOAPI_DEFAULT_HDR_SZ 512
 #define NSS_CRYPTOAPI_TIMEOUT 100 /* msecs */
 #define NSS_CRYPTOAPI_MAX_IV (AES_BLOCK_SIZE/sizeof(uint32_t))
-
-#define NSS_CRYPTOAPI_TIMEO_TICKS msecs_to_jiffies(3000) /* milliseconds */
+#define NSS_CRYPTOAPI_REQ_TIMEOUT_TICKS msecs_to_jiffies(NSS_CRYPTOAPI_REQ_TIMEO_SECS * MSEC_PER_SEC)
 
 /*
  * Cipher mode
@@ -114,6 +113,8 @@ struct nss_cryptoapi_ctx {
 	struct dentry *dentry;			/* Debugfs entry */
 	struct nss_crypto_user *user;		/* Crypto user */
 	struct crypto_tfm *sw_tfm;		/* SW fallback context */
+
+	struct completion complete;		/* Completion object for outstanding packets */
 
 	atomic_t active;			/* ctx status(active/inactive) */
 	atomic_t refcnt;			/* ctx refcnt */

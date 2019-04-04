@@ -34,6 +34,7 @@
 #include <linux/crypto.h>
 #include <linux/rtnetlink.h>
 #include <linux/debugfs.h>
+#include <linux/completion.h>
 
 #include <crypto/aes.h>
 #include <crypto/des.h>
@@ -91,6 +92,7 @@ int nss_cryptoapi_aead_init(struct crypto_aead *aead)
 
 	ctx->user = g_cryptoapi.user;
 	ctx->stats.init++;
+	init_completion(&ctx->complete);
 
 	need_fallback = crypto_tfm_alg_flags(tfm) & CRYPTO_ALG_NEED_FALLBACK;
 	if (!need_fallback)
@@ -123,6 +125,7 @@ void nss_cryptoapi_aead_exit(struct crypto_aead *aead)
 {
 	struct crypto_tfm *tfm = crypto_aead_tfm(aead);
 	struct nss_cryptoapi_ctx *ctx = crypto_tfm_ctx(tfm);
+	int ret;
 
 	BUG_ON(!ctx);
 
@@ -158,12 +161,10 @@ void nss_cryptoapi_aead_exit(struct crypto_aead *aead)
 		/*
 		 * We need to wait for any outstanding packet using this ctx.
 		 * Once the last packet get processed, reference count will become
-		 * 0 for this ctx. Since there is no other mechanism to signal the
-		 * complete here, we will do a while wait for the reference to go down
-		 * to 0.
+		 * 0 this ctx. We will wait for the reference to go down to 0.
 		 */
-		while (atomic_read(&ctx->refcnt) > 0)
-		;
+		ret = wait_for_completion_timeout(&ctx->complete, NSS_CRYPTOAPI_REQ_TIMEOUT_TICKS);
+		WARN_ON(!ret);
 	}
 
 	ctx->sid = NSS_CRYPTO_SESSION_MAX;
