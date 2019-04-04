@@ -33,6 +33,7 @@
 #include <linux/delay.h>
 #include <linux/crypto.h>
 #include <linux/debugfs.h>
+#include <linux/completion.h>
 
 #include <crypto/aes.h>
 #include <crypto/des.h>
@@ -114,6 +115,7 @@ int nss_cryptoapi_ahash_cra_init(struct crypto_tfm *tfm)
 	ctx->user = g_cryptoapi.user;
 	ctx->sid = NSS_CRYPTO_SESSION_MAX;
 	ctx->stats.init++;
+	init_completion(&ctx->complete);
 
 	/*
 	 * set this tfm reqsize to the transform specific structure
@@ -130,6 +132,7 @@ int nss_cryptoapi_ahash_cra_init(struct crypto_tfm *tfm)
 void nss_cryptoapi_ahash_cra_exit(struct crypto_tfm *tfm)
 {
 	struct nss_cryptoapi_ctx *ctx = crypto_tfm_ctx(tfm);
+	int ret;
 
 	BUG_ON(!ctx);
 	NSS_CRYPTOAPI_VERIFY_MAGIC(ctx);
@@ -151,12 +154,10 @@ void nss_cryptoapi_ahash_cra_exit(struct crypto_tfm *tfm)
 		/*
 		 * We need to wait for any outstanding packet using this ctx.
 		 * Once the last packet get processed, reference count will become
-		 * 0 for this ctx. Since there is no other mechanism to signal the
-		 * complete here, we will do a while wait for the reference to go down
-		 * to 0.
+		 * 0 this ctx. We will wait for the reference to go down to 0.
 		 */
-		while (atomic_read(&ctx->refcnt) > 0)
-		;
+		ret = wait_for_completion_timeout(&ctx->complete, NSS_CRYPTOAPI_REQ_TIMEOUT_TICKS);
+		WARN_ON(!ret);
 	}
 
 	ctx->sid = NSS_CRYPTO_SESSION_MAX;

@@ -34,6 +34,7 @@
 #include <linux/crypto.h>
 #include <linux/rtnetlink.h>
 #include <linux/debugfs.h>
+#include <linux/completion.h>
 
 #include <crypto/aes.h>
 #include <crypto/des.h>
@@ -1114,7 +1115,9 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 void nss_cryptoapi_ref_dec(struct nss_cryptoapi_ctx *ctx)
 {
 	BUG_ON(atomic_read(&ctx->refcnt) == 0);
-	atomic_dec(&ctx->refcnt);
+	if (atomic_sub_and_test(1, &ctx->refcnt)) {
+		complete(&ctx->complete);
+	}
 }
 
 /*
