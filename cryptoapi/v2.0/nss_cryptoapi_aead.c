@@ -34,6 +34,7 @@
 #include <linux/crypto.h>
 #include <linux/rtnetlink.h>
 #include <linux/debugfs.h>
+#include <linux/completion.h>
 
 #include <crypto/aes.h>
 #include <crypto/des.h>
@@ -53,16 +54,6 @@
 #include <nss_crypto_defines.h>
 #include <nss_cryptoapi.h>
 #include "nss_cryptoapi_private.h"
-
-/*
- * nss_cryptoapi_aead_atomic_wait()
- *	Cryptoapi atomic wait action API
- */
-int nss_cryptoapi_aead_atomic_wait(atomic_t *p)
-{
-	schedule();
-	return 0;
-}
 
 /*
  * nss_cryptoapi_aead_ctx2session()
@@ -100,6 +91,8 @@ int nss_cryptoapi_aead_init(struct crypto_aead *aead)
 	memset(ctx, 0, sizeof(struct nss_cryptoapi_ctx));
 
 	ctx->user = g_cryptoapi.user;
+	ctx->stats.init++;
+	init_completion(&ctx->complete);
 
 	need_fallback = crypto_tfm_alg_flags(tfm) & CRYPTO_ALG_NEED_FALLBACK;
 	if (!need_fallback)
@@ -110,6 +103,7 @@ int nss_cryptoapi_aead_init(struct crypto_aead *aead)
 	 */
 	sw_tfm = crypto_alloc_aead(crypto_tfm_alg_name(tfm), 0, CRYPTO_ALG_ASYNC | CRYPTO_ALG_NEED_FALLBACK);
 	if (IS_ERR(sw_tfm)) {
+		ctx->stats.failed_init++;
 		nss_cfi_err("Unable to allocate fallback for aead:%s\n", crypto_tfm_alg_name(tfm));
 		return 0;
 	}
@@ -131,6 +125,7 @@ void nss_cryptoapi_aead_exit(struct crypto_aead *aead)
 {
 	struct crypto_tfm *tfm = crypto_aead_tfm(aead);
 	struct nss_cryptoapi_ctx *ctx = crypto_tfm_ctx(tfm);
+	int ret;
 
 	BUG_ON(!ctx);
 
@@ -139,15 +134,21 @@ void nss_cryptoapi_aead_exit(struct crypto_aead *aead)
 		ctx->sw_tfm = NULL;
 	}
 
+	ctx->stats.exit++;
+
 	/*
 	 * When fallback_req is set, it means that we didn't allocate
 	 * session from qca-nss-crypto, it maybe uses software crypto.
 	 */
-	if (ctx->fallback_req)
+	if (ctx->fallback_req) {
+		ctx->stats.failed_fallback++;
 		return;
+	}
 
-	if (!atomic_read(&ctx->active))
+	if (!atomic_read(&ctx->active)) {
+		ctx->stats.failed_exit++;
 		return;
+	}
 
 	/*
 	 * Mark cryptoapi context as inactive
@@ -157,7 +158,13 @@ void nss_cryptoapi_aead_exit(struct crypto_aead *aead)
 	nss_crypto_session_free(ctx->user, ctx->sid);
 
 	if (!atomic_sub_and_test(1, &ctx->refcnt)) {
-		wait_on_atomic_t(&ctx->refcnt, nss_cryptoapi_aead_atomic_wait, TASK_INTERRUPTIBLE);
+		/*
+		 * We need to wait for any outstanding packet using this ctx.
+		 * Once the last packet get processed, reference count will become
+		 * 0 this ctx. We will wait for the reference to go down to 0.
+		 */
+		ret = wait_for_completion_timeout(&ctx->complete, NSS_CRYPTOAPI_REQ_TIMEOUT_TICKS);
+		WARN_ON(!ret);
 	}
 
 	ctx->sid = NSS_CRYPTO_SESSION_MAX;
@@ -346,6 +353,7 @@ void nss_cryptoapi_aead_done(void *app_data, struct nss_crypto_hdr *ch, uint8_t 
 	struct aead_request *req = (struct aead_request *)app_data;
 	struct crypto_aead *aead = crypto_aead_reqtfm(req);
 	struct nss_cryptoapi_ctx *ctx = crypto_aead_ctx(aead);
+	int error;
 
 	BUG_ON(!ch);
 
@@ -361,13 +369,14 @@ void nss_cryptoapi_aead_done(void *app_data, struct nss_crypto_hdr *ch, uint8_t 
 	/*
 	 * Check if there is any error reported by hardware
 	 */
-	aead_request_complete(req, nss_cryptoapi_status2error(ctx, status));
+	error = nss_cryptoapi_status2error(ctx, status);
 	ctx->stats.completed++;
 
 	/*
 	 * Decrement cryptoapi reference
 	 */
 	nss_cryptoapi_ref_dec(ctx);
+	aead_request_complete(req, error);
 }
 
 /*

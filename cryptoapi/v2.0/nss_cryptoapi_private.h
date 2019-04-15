@@ -31,10 +31,9 @@
 #define NSS_CRYPTOAPI_AHASH_MAGIC 0x7FEF
 #define NSS_CRYPTOAPI_HDR_POOL_SZ 1024
 #define NSS_CRYPTOAPI_DEFAULT_HDR_SZ 512
-#define NSS_CRYPTOAPI_TIMEOUT 10 /* seconds */
+#define NSS_CRYPTOAPI_TIMEOUT 100 /* msecs */
 #define NSS_CRYPTOAPI_MAX_IV (AES_BLOCK_SIZE/sizeof(uint32_t))
-
-#define NSS_CRYPTOAPI_TIMEO_TICKS msecs_to_jiffies(3000) /* milliseconds */
+#define NSS_CRYPTOAPI_REQ_TIMEOUT_TICKS msecs_to_jiffies(NSS_CRYPTOAPI_REQ_TIMEO_SECS * MSEC_PER_SEC)
 
 /*
  * Cipher mode
@@ -93,6 +92,11 @@ struct nss_cryptoapi_req_ctx {
 struct nss_cryptoapi_stats {
 	uint64_t queued;				/* Packets queued for completion */
 	uint64_t completed;				/* Packet completed */
+	uint64_t init;					/* Init invoked */
+	uint64_t exit;					/* Exit invoked */
+	uint64_t failed_init;				/* Init failed */
+	uint64_t failed_exit;				/* Exit failed */
+	uint64_t failed_fallback;			/* Fallback */
 	uint64_t failed_queue;				/* Packets failing enqueue */
 	uint64_t failed_nomem;				/* Packets failing due to no memory */
 	uint64_t failed_req;				/* Packets failing due incorrect request */
@@ -109,6 +113,8 @@ struct nss_cryptoapi_ctx {
 	struct dentry *dentry;			/* Debugfs entry */
 	struct nss_crypto_user *user;		/* Crypto user */
 	struct crypto_tfm *sw_tfm;		/* SW fallback context */
+
+	struct completion complete;		/* Completion object for outstanding packets */
 
 	atomic_t active;			/* ctx status(active/inactive) */
 	atomic_t refcnt;			/* ctx refcnt */

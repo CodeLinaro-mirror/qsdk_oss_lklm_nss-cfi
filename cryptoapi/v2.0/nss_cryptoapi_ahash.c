@@ -33,6 +33,7 @@
 #include <linux/delay.h>
 #include <linux/crypto.h>
 #include <linux/debugfs.h>
+#include <linux/completion.h>
 
 #include <crypto/aes.h>
 #include <crypto/des.h>
@@ -81,16 +82,6 @@ extern struct nss_cryptoapi g_cryptoapi;
 #endif /* NSS_CFI_DEBUG */
 
 /*
- * nss_cryptoapi_ahash_atomic_wait()
- *	Cryptoapi atomic wait action API
- */
-int nss_cryptoapi_ahash_atomic_wait(atomic_t *p)
-{
-	schedule();
-	return 0;
-}
-
-/*
  * nss_cryptoapi_ahash_ctx2session()
  *	Cryptoapi function to get the session ID for an AHASH
  */
@@ -124,6 +115,8 @@ int nss_cryptoapi_ahash_cra_init(struct crypto_tfm *tfm)
 
 	ctx->user = g_cryptoapi.user;
 	ctx->sid = NSS_CRYPTO_SESSION_MAX;
+	ctx->stats.init++;
+	init_completion(&ctx->complete);
 
 	/*
 	 * set this tfm reqsize to the transform specific structure
@@ -140,12 +133,16 @@ int nss_cryptoapi_ahash_cra_init(struct crypto_tfm *tfm)
 void nss_cryptoapi_ahash_cra_exit(struct crypto_tfm *tfm)
 {
 	struct nss_cryptoapi_ctx *ctx = crypto_tfm_ctx(tfm);
+	int ret;
 
 	BUG_ON(!ctx);
 	NSS_CRYPTOAPI_VERIFY_MAGIC(ctx);
+	ctx->stats.exit++;
 
-	if (!atomic_read(&ctx->active))
+	if (!atomic_read(&ctx->active)) {
+		ctx->stats.failed_exit++;
 		return;
+	}
 
 	/*
 	 * Mark cryptoapi context as inactive
@@ -155,7 +152,13 @@ void nss_cryptoapi_ahash_cra_exit(struct crypto_tfm *tfm)
 	nss_crypto_session_free(ctx->user, ctx->sid);
 
 	if (!atomic_sub_and_test(1, &ctx->refcnt)) {
-		wait_on_atomic_t(&ctx->refcnt, nss_cryptoapi_ahash_atomic_wait, TASK_INTERRUPTIBLE);
+		/*
+		 * We need to wait for any outstanding packet using this ctx.
+		 * Once the last packet get processed, reference count will become
+		 * 0 this ctx. We will wait for the reference to go down to 0.
+		 */
+		ret = wait_for_completion_timeout(&ctx->complete, NSS_CRYPTOAPI_REQ_TIMEOUT_TICKS);
+		WARN_ON(!ret);
 	}
 
 	ctx->sid = NSS_CRYPTO_SESSION_MAX;
@@ -220,6 +223,7 @@ void nss_cryptoapi_ahash_done(void *app_data, struct nss_crypto_hdr *ch, uint8_t
 	struct nss_cryptoapi_ctx *ctx = crypto_tfm_ctx(req->base.tfm);
 	struct nss_cryptoapi_req_ctx *rctx = ahash_request_ctx(req);
 	uint8_t *hw_hmac;
+	int error;
 
 	BUG_ON(!ch);
 
@@ -246,13 +250,14 @@ void nss_cryptoapi_ahash_done(void *app_data, struct nss_crypto_hdr *ch, uint8_t
 	/*
 	 * Check if there is any error reported by hardware
 	 */
-	req->base.complete(&req->base, nss_cryptoapi_status2error(ctx, status));
+	error = nss_cryptoapi_status2error(ctx, status);
 	ctx->stats.completed++;
 
 	/*
 	 * Decrement cryptoapi reference
 	 */
 	nss_cryptoapi_ref_dec(ctx);
+	req->base.complete(&req->base, error);
 }
 
 /*

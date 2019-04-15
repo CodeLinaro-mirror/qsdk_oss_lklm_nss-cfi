@@ -34,6 +34,7 @@
 #include <linux/crypto.h>
 #include <linux/rtnetlink.h>
 #include <linux/debugfs.h>
+#include <linux/completion.h>
 
 #include <crypto/aes.h>
 #include <crypto/des.h>
@@ -70,7 +71,7 @@ MODULE_PARM_DESC(enable_ahash, "Enable Cryptoapi AHASH support");
 
 static int free_timeout = NSS_CRYPTOAPI_TIMEOUT;
 module_param(free_timeout, int, 0644);
-MODULE_PARM_DESC(free_timeout, "Max Timeout for Crypto session deallocation in seconds");
+MODULE_PARM_DESC(free_timeout, "Timeout (msecs) for delayed session free; due to outstanding requests");
 
 struct nss_cryptoapi_algo_info g_algo_info[] = {
 	/*
@@ -1424,7 +1425,9 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 void nss_cryptoapi_ref_dec(struct nss_cryptoapi_ctx *ctx)
 {
 	BUG_ON(atomic_read(&ctx->refcnt) == 0);
-	atomic_dec(&ctx->refcnt);
+	if (atomic_sub_and_test(1, &ctx->refcnt)) {
+		complete(&ctx->complete);
+	}
 }
 
 /*
@@ -1624,6 +1627,11 @@ ssize_t nss_cryptoapi_ctx_stats_read(struct file *fp, char __user *ubuf, size_t 
 	 */
 	len = snprintf(buf, max_buf_len, "queued - %llu\n", stats->queued);
 	len += snprintf(buf + len, max_buf_len - len, "completed - %llu\n", stats->completed);
+	len += snprintf(buf + len, max_buf_len - len, "init - %llu\n", stats->init);
+	len += snprintf(buf + len, max_buf_len - len, "exit - %llu\n", stats->exit);
+	len += snprintf(buf + len, max_buf_len - len, "failed_init - %llu\n", stats->failed_init);
+	len += snprintf(buf + len, max_buf_len - len, "failed_exit - %llu\n", stats->failed_exit);
+	len += snprintf(buf + len, max_buf_len - len, "failed_fallback - %llu\n", stats->failed_fallback);
 	len += snprintf(buf + len, max_buf_len - len, "failed_queue - %llu\n", stats->failed_queue);
 	len += snprintf(buf + len, max_buf_len - len, "failed_nomem - %llu\n", stats->failed_nomem);
 	len += snprintf(buf + len, max_buf_len - len, "failed_req - %llu\n", stats->failed_req);
@@ -1853,7 +1861,7 @@ int nss_cryptoapi_init(void)
 	/*
 	 * Fill context free timeout
 	 */
-	g_cryptoapi.ctx.timeout_ticks = msecs_to_jiffies(free_timeout * MSEC_PER_SEC);
+	g_cryptoapi.ctx.timeout_ticks = msecs_to_jiffies(free_timeout);
 
 	atomic_set(&g_cryptoapi.registered, 0);
 
