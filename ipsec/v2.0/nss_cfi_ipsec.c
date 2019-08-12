@@ -1,4 +1,4 @@
-/* Copyright (c) 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -669,6 +669,18 @@ sa_free:
 }
 
 /*
+ * nss_cfi_ipsec_offload()
+ * 	Offload function for encapsulation.
+ */
+static nss_cfi_offload_status_t nss_cfi_ipsec_offload(struct sk_buff *skb, struct nss_cfi_crypto_info *crypto)
+{
+	/*
+	 * We don't support offloading.
+	 */
+	return -1;
+}
+
+/*
  * nss_cfi_ipsec_dev_event()
  *	notifier function for IPsec device events.
  */
@@ -847,7 +859,8 @@ int __init nss_cfi_ipsec_init_module(void)
 	tunnel_map.used = 0;
 
 	register_netdevice_notifier(&nss_cfi_ipsec_notifier);
-	nss_cfi_ocf_register_ipsec(nss_cfi_ipsec_trap_encap, nss_cfi_ipsec_trap_decap, nss_cfi_ipsec_free_session);
+	nss_cfi_ocf_register_ipsec(nss_cfi_ipsec_trap_encap, nss_cfi_ipsec_trap_decap, nss_cfi_ipsec_free_session,
+				nss_cfi_ipsec_offload);
 
 	return 0;
 }

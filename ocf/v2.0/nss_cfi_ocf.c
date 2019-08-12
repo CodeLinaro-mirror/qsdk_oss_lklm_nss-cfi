@@ -121,6 +121,14 @@ static struct nss_cfi_ocf_algo_map cfi_algo[NSS_CRYPTO_CMN_ALGO_MAX] = {
 };
 
 /*
+ * Dummy trap function for Offload
+ */
+static int32_t nss_cfi_ocf_offload_trap(struct sk_buff *skb, struct nss_cfi_crypto_info *crypto)
+{
+	return -1;
+}
+
+/*
  * Dummy trap function for Session
  */
 static int32_t nss_cfi_ocf_session_trap(uint32_t session_idx)
@@ -579,9 +587,25 @@ static int nss_cfi_ocf_process(device_t dev, struct cryptop *crp, int hint)
 	 * If packet is for encryption call the registered trap function
 	 */
 	if ((cip_crd->crd_flags & CRD_F_ENCRYPT) && (crp->crp_flags & CRYPTO_F_SKBUF)) {
-		sc->encrypt_fn((struct sk_buff *)crp->crp_buf, &gbl_crypto_info[ch->index]);
+		if (sc->encrypt_fn((struct sk_buff *)crp->crp_buf, &gbl_crypto_info[ch->index])) {
+			goto no_offload;
+		}
+
+		/*
+		 * Call offload function, if offload is disabled (non zero return value) continue normal transformation.
+		 * else set EINPROGRESS in crp to indicate packet has been consumed by crypto.
+		 */
+		if (sc->offload_fn((struct sk_buff *)crp->crp_buf, &gbl_crypto_info[ch->index])) {
+			goto no_offload;
+		}
+
+		crp->crp_etype = EINPROGRESS;
+		nss_crypto_hdr_free(sc->crypto, ch);
+		crypto_done(crp);
+		return 0;
 	}
 
+no_offload:
 	/*
 	 *  Send the buffer to CORE layer for processing
 	 */
@@ -634,16 +658,19 @@ void nss_cfi_ocf_unregister(void *app_data, struct nss_crypto_user *user)
  */
 void nss_cfi_ocf_register_ipsec(nss_cfi_data_trap_t encrypt_fn,
 				nss_cfi_data_trap_t decrypt_fn,
-				nss_cfi_session_trap_t session_fn)
+				nss_cfi_session_trap_t session_fn,
+				nss_cfi_data_trap_t offload_fn)
 {
 	struct nss_cfi_ocf *sc = &g_cfi_ocf;
 	nss_cfi_data_trap_t encrypt;
 	nss_cfi_data_trap_t decrypt;
+	nss_cfi_data_trap_t offload;
 	nss_cfi_session_trap_t session;
 
 	encrypt = xchg(&sc->encrypt_fn, encrypt_fn);
 	decrypt = xchg(&sc->decrypt_fn, decrypt_fn);
 	session = xchg(&sc->session_fn, session_fn);
+	offload = xchg(&sc->offload_fn, offload_fn);
 }
 
 /*
@@ -654,10 +681,12 @@ void nss_cfi_ocf_unregister_ipsec(void)
 	struct nss_cfi_ocf *sc = &g_cfi_ocf;
 	nss_cfi_data_trap_t encrypt;
 	nss_cfi_data_trap_t decrypt;
+	nss_cfi_data_trap_t offload;
 	nss_cfi_session_trap_t session;
 
 	nss_cfi_info("Unregistering IPsec trap handlers\n");
 
+	offload = xchg(&sc->offload_fn, nss_cfi_ocf_offload_trap);
 	session = xchg(&sc->session_fn, nss_cfi_ocf_session_trap);
 	encrypt = xchg(&sc->encrypt_fn, nss_cfi_ocf_encrypt_trap);
 	decrypt = xchg(&sc->decrypt_fn, nss_cfi_ocf_decrypt_trap);
@@ -674,6 +703,7 @@ int nss_cfi_ocf_init(void)
 	struct nss_crypto_user_ctx *user_ctx;
 	nss_cfi_data_trap_t encrypt;
 	nss_cfi_data_trap_t decrypt;
+	nss_cfi_data_trap_t offload;
 	nss_cfi_session_trap_t session;
 
 	softc_device_init(sc, NSS_CFI_DRV_NAME, 0, nss_cfi_ocf_methods);
@@ -701,6 +731,7 @@ int nss_cfi_ocf_init(void)
 	encrypt = xchg(&sc->encrypt_fn, nss_cfi_ocf_encrypt_trap);
 	decrypt = xchg(&sc->decrypt_fn, nss_cfi_ocf_decrypt_trap);
 	session = xchg(&sc->session_fn, nss_cfi_ocf_session_trap);
+	offload = xchg(&sc->offload_fn, nss_cfi_ocf_offload_trap);
 
 	sc->crypto = nss_crypto_register_user(user_ctx, "nss_cfi_ocf");
 	if (!sc->crypto) {

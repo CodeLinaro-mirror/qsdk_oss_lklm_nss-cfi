@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -78,7 +78,8 @@ typedef void (*nss_cfi_ipsec_fill_tuple_method_t)(struct sk_buff *skb, struct ns
  * to the IPsec tunnel
  */
 struct nss_cfi_ipsec_skb_cb {
-	struct net_device *hlos_dev;
+	struct net_device *hlos_dev; 	/* KLIPS device */
+	uint32_t res[2];		/* Reserved for v2.0 */
 };
 
 /*
@@ -854,7 +855,7 @@ int __init nss_cfi_ipsec_init_module(void)
 
 	register_netdevice_notifier(&nss_cfi_ipsec_notifier);
 
-	nss_cfi_ocf_register_ipsec(nss_cfi_ipsec_trap_encap, nss_cfi_ipsec_trap_decap, nss_cfi_ipsec_free_session);
+	nss_cfi_ocf_register_ipsec(nss_cfi_ipsec_trap_encap, nss_cfi_ipsec_trap_decap, nss_cfi_ipsec_free_session, NULL);
 
 	return 0;
 }
