@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2019 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1807,6 +1807,23 @@ struct nss_cryptoapi_algo_info *nss_cryptoapi_cra_name2info(const char *cra_name
 }
 
 /*
+ * nss_cryptoapi_cra_name_lookup()
+ *     Lookup the associated algorithm in NSS for the given transformation by name
+ */
+struct nss_cryptoapi_algo_info *nss_cryptoapi_cra_name_lookup(const char *cra_name)
+{
+	struct nss_cryptoapi_algo_info *info = g_algo_info;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(g_algo_info); i++, info++) {
+		if (!strncmp(info->cra_name, cra_name, strlen(cra_name)))
+			return info;
+	}
+
+	return NULL;
+}
+
+/*
  * nss_cryptoapi_status2error()
  *	Convert the crypto status (if any) into Linux specific errno
  */
@@ -2087,6 +2104,7 @@ void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
 	struct aead_alg *aead = cryptoapi_aead_algs;
 	struct ahash_alg *ahash = cryptoapi_ahash_algs;
 	struct nss_cryptoapi *sc = app_data;
+	struct nss_cryptoapi_algo_info *info;
 	int i;
 
 	nss_cfi_info("%p: Registering algorithms with Linux\n", sc);
@@ -2106,6 +2124,10 @@ void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
 	}
 
 	for (i = 0; enable_ablk && (i < ARRAY_SIZE(cryptoapi_ablkcipher_algs)); i++, ablk++) {
+		info = nss_cryptoapi_cra_name_lookup(ablk->cra_name);
+		if(!info || !nss_crypto_algo_is_supp(info->algo))
+			continue;
+
 		if (crypto_register_alg(ablk)) {
 			nss_cfi_err("%p: ABLK registration failed(%s)\n", sc, ablk->cra_name);
 			ablk->cra_flags = 0;
@@ -2113,6 +2135,10 @@ void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
 	}
 
 	for (i = 0; enable_aead && (i < ARRAY_SIZE(cryptoapi_aead_algs)); i++, aead++) {
+		info = nss_cryptoapi_cra_name_lookup(aead->base.cra_name);
+		if(!info || !nss_crypto_algo_is_supp(info->algo))
+			continue;
+
 		if (crypto_register_aead(aead)) {
 			nss_cfi_err("%p: AEAD registration failed(%s)\n", sc, aead->base.cra_name);
 			aead->base.cra_flags = 0;
@@ -2120,6 +2146,10 @@ void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
 	}
 
 	for (i = 0; enable_ahash && (i < ARRAY_SIZE(cryptoapi_ahash_algs)); i++, ahash++) {
+		info = nss_cryptoapi_cra_name_lookup(ahash->halg.base.cra_name);
+		if(!info || !nss_crypto_algo_is_supp(info->algo))
+			continue;
+
 		if (crypto_register_ahash(ahash)) {
 			nss_cfi_err("%p: AHASH registration failed(%s)\n", sc, ahash->halg.base.cra_name);
 			ahash->halg.base.cra_flags = 0;
