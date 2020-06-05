@@ -310,8 +310,7 @@ int nss_cryptoapi_ablk_encrypt(struct ablkcipher_request *req)
 	 * Block size not aligned.
 	 * AES-CTR requires only a one-byte block size alignment.
 	 */
-	if (!IS_ALIGNED(req->nbytes, crypto_tfm_alg_blocksize(tfm)) &&
-			ctx->info->cipher_mode != NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686) {
+	if (!IS_ALIGNED(req->nbytes, crypto_tfm_alg_blocksize(tfm)) && ctx->info->blk_align) {
 		ctx->stats.failed_align++;
 		crypto_ablkcipher_set_flags(cipher, CRYPTO_TFM_RES_BAD_BLOCK_LEN);
 		return -EFAULT;
@@ -384,7 +383,7 @@ int nss_cryptoapi_ablk_decrypt(struct ablkcipher_request *req)
 	/*
 	 * Block size not aligned
 	 */
-	if (!IS_ALIGNED(req->nbytes, crypto_tfm_alg_blocksize(tfm))) {
+	if (!IS_ALIGNED(req->nbytes, crypto_tfm_alg_blocksize(tfm)) && ctx->info->blk_align) {
 		ctx->stats.failed_align++;
 		crypto_ablkcipher_set_flags(cipher, CRYPTO_TFM_RES_BAD_BLOCK_LEN);
 		return -EFAULT;

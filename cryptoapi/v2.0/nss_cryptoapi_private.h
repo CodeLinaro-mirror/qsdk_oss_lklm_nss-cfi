@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -161,6 +161,7 @@ struct nss_cryptoapi_algo_info {
 	enum nss_cryptoapi_cipher_mode cipher_mode;	/* Cipher mode */
 	enum nss_cryptoapi_auth_mode auth_mode;		/* Authentication mode */
 	nss_cryptoapi_aead_tx_proc_method_t aead_tx_proc; /* Tx processing function */
+	bool blk_align;					/* Allow buffer length unaligned to block */
 };
 
 #if defined NSS_CFI_DEBUG

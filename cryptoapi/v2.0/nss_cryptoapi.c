@@ -82,24 +82,28 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.cipher_keylen = AES_KEYSIZE_128,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CBC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.blk_align = true,
 	},
 	{
 		.cra_name = "cbc(aes)",
 		.cipher_keylen = AES_KEYSIZE_192,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CBC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.blk_align = true,
 	},
 	{
 		.cra_name = "cbc(aes)",
 		.cipher_keylen = AES_KEYSIZE_256,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CBC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.blk_align = true,
 	},
 	{
 		.cra_name = "cbc(des3_ede)",
 		.cipher_keylen = DES3_EDE_KEY_SIZE,
 		.algo = NSS_CRYPTO_CMN_ALGO_3DES_CBC,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CBC,
+		.blk_align = true,
 	},
 	{
 		.cra_name = "rfc3686(ctr(aes))",
@@ -107,6 +111,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.algo = NSS_CRYPTO_CMN_ALGO_AES128_CTR,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
+		.blk_align = false,
 	},
 	{
 		.cra_name = "rfc3686(ctr(aes))",
@@ -114,6 +119,7 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.algo = NSS_CRYPTO_CMN_ALGO_AES192_CTR,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
+		.blk_align = false,
 	},
 	{
 		.cra_name = "rfc3686(ctr(aes))",
@@ -121,24 +127,28 @@ struct nss_cryptoapi_algo_info g_algo_info[] = {
 		.algo = NSS_CRYPTO_CMN_ALGO_AES256_CTR,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_CTR_RFC3686,
 		.nonce = CTR_RFC3686_NONCE_SIZE,
+		.blk_align = false,
 	},
 	{
 		.cra_name = "ecb(aes)",
 		.cipher_keylen = AES_KEYSIZE_128,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES128_ECB,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_ECB,
+		.blk_align = true,
 	},
 	{
 		.cra_name = "ecb(aes)",
 		.cipher_keylen = AES_KEYSIZE_192,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES192_ECB,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_ECB,
+		.blk_align = true,
 	},
 	{
 		.cra_name = "ecb(aes)",
 		.cipher_keylen = AES_KEYSIZE_256,
 		.algo = NSS_CRYPTO_CMN_ALGO_AES256_ECB,
 		.cipher_mode = NSS_CRYPTOAPI_CIPHER_MODE_ECB,
+		.blk_align = true,
 	},
 
 	/*
@@ -1390,7 +1400,12 @@ static struct crypto_alg cryptoapi_ablkcipher_algs[] = {
 		.cra_u          = {
 			.ablkcipher = {
 				.ivsize         = CTR_RFC3686_IV_SIZE,
+/*
+ * geniv deprecated from kernel version 5.0 and above
+ */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0))
 				.geniv          = "seqiv",
+#endif
 				.min_keysize    = AES_MIN_KEY_SIZE + CTR_RFC3686_NONCE_SIZE,
 				.max_keysize    = AES_MAX_KEY_SIZE + CTR_RFC3686_NONCE_SIZE,
 				.setkey         = nss_cryptoapi_ablk_setkey,
