@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2019 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -126,7 +126,7 @@ int nss_cryptoapi_ablkcipher_init(struct crypto_tfm *tfm)
 	 */
 	sw_tfm = crypto_alloc_ablkcipher(crypto_tfm_alg_name(tfm), 0, CRYPTO_ALG_ASYNC | CRYPTO_ALG_NEED_FALLBACK);
 	if (IS_ERR(sw_tfm)) {
-		nss_cfi_err("%p: unable to allocate SW_TFM(%s)\n", ctx, crypto_tfm_alg_name(tfm));
+		nss_cfi_err("%px: unable to allocate SW_TFM(%s)\n", ctx, crypto_tfm_alg_name(tfm));
 		return -ENOMEM;
 	}
 
@@ -261,7 +261,7 @@ int nss_cryptoapi_ablk_setkey(struct crypto_ablkcipher *cipher, const u8 *key, u
 
 	status = nss_crypto_session_alloc(ctx->user, &data, &ctx->sid);
 	if (status < 0) {
-		nss_cfi_err("%p: Unable to allocate crypto session(%d)\n", ctx, status);
+		nss_cfi_err("%px: Unable to allocate crypto session(%d)\n", ctx, status);
 		crypto_ablkcipher_set_flags(cipher, CRYPTO_TFM_RES_BAD_FLAGS);
 		return status;
 	}
@@ -429,7 +429,6 @@ int nss_cryptoapi_ablk_decrypt(struct ablkcipher_request *req)
 
 	if (ctx->fallback_req) {
 		struct crypto_ablkcipher *orig_tfm = crypto_ablkcipher_reqtfm(req);
-
 
 		/*
 		 * Set new fallback tfm to the request

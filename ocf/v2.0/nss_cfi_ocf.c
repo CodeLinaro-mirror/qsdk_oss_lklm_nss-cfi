@@ -352,7 +352,7 @@ static int nss_cfi_ocf_newsession(device_t dev, uint32_t *sidp, struct cryptoini
 		break;
 
 	default:
-		nss_cfi_err("%p: wrong algo %d\n", sc, alg);
+		nss_cfi_err("%px: wrong algo %d\n", sc, alg);
 		return EINVAL;
 	}
 
@@ -372,7 +372,7 @@ static int nss_cfi_ocf_newsession(device_t dev, uint32_t *sidp, struct cryptoini
 
 	status = nss_crypto_session_alloc(sc->crypto, &session_data, &session);
 	if (status < 0) {
-		nss_cfi_err("%p: unable to allocate session: status %d\n", sc, cfi_crypto.sid);
+		nss_cfi_err("%px: unable to allocate session: status %d\n", sc, cfi_crypto.sid);
 		return EINVAL;
 	}
 
@@ -463,7 +463,7 @@ static void nss_cfi_ocf_process_done(void *app_data, struct nss_crypto_hdr *ch, 
 		break;
 
 	default:
-		nss_cfi_err("%p: wrong cipher or auth algo %d\n", crp, crd->crd_alg);
+		nss_cfi_err("%px: wrong cipher or auth algo %d\n", crp, crd->crd_alg);
 		goto crypto_done;
 	}
 
@@ -522,7 +522,7 @@ static int nss_cfi_ocf_process(device_t dev, struct cryptop *crp, int hint)
 
 	sid = NSS_CFI_OCF_SESSION(crp->crp_sid);
 	if (sid >= NSS_CRYPTO_MAX_IDXS) {
-		nss_cfi_err("%p: session id %d not valid\n", crp, sid);
+		nss_cfi_err("%px: session id %d not valid\n", crp, sid);
 		goto crypto_done;
 	}
 
@@ -556,7 +556,7 @@ static int nss_cfi_ocf_process(device_t dev, struct cryptop *crp, int hint)
 		break;
 
 	default:
-		nss_cfi_err("%p: wrong cipher or auth algo %d\n", crp, crd->crd_alg);
+		nss_cfi_err("%px: wrong cipher or auth algo %d\n", crp, crd->crd_alg);
 		goto crypto_done;
 	}
 
@@ -571,7 +571,7 @@ static int nss_cfi_ocf_process(device_t dev, struct cryptop *crp, int hint)
 	 */
 	ch = nss_crypto_hdr_alloc(sc->crypto, sid, 1, ivsize, hash_len, false);
 	if (!ch) {
-		nss_cfi_dbg("%p: not able to allocate crypto buffer\n");
+		nss_cfi_dbg("%px: not able to allocate crypto buffer\n");
 		goto crypto_done;
 	}
 
@@ -594,7 +594,7 @@ static int nss_cfi_ocf_process(device_t dev, struct cryptop *crp, int hint)
 		iv_addr = nss_crypto_hdr_get_iv(ch);
 		memcpy(iv_addr, skb->data + cip_crd->crd_inject, ivsize);
 
-		nss_cfi_dbg("enc=(%d), dec=(%d), ciph_len(%d), ciph_skip(%d), inject(%d), iv_addr(%p)\n",
+		nss_cfi_dbg("enc=(%d), dec=(%d), ciph_len(%d), ciph_skip(%d), inject(%d), iv_addr(%px)\n",
 				encrypt, decrypt, cipher_len, cip_crd->crd_skip, cip_crd->crd_inject, iv_addr);
 	}
 
@@ -618,7 +618,7 @@ static int nss_cfi_ocf_process(device_t dev, struct cryptop *crp, int hint)
 		nss_crypto_hdr_set_skip(ch, cip_crd->crd_skip);
 		nss_crypto_hdr_set_op(ch, NSS_CRYPTO_OP_DIR_AUTH_DEC);
 	} else {
-		nss_cfi_err("%p: invalid operation\n", ch);
+		nss_cfi_err("%px: invalid operation\n", ch);
 	}
 
 	/*
@@ -772,7 +772,7 @@ int nss_cfi_ocf_init(void)
 
 	sc->cid = crypto_get_driverid(softc_get_device(sc), CRYPTOCAP_F_HARDWARE);
 	if (sc->cid < 0) {
-		nss_cfi_err("%p: could not get crypto driver id\n", sc);
+		nss_cfi_err("%px: could not get crypto driver id\n", sc);
 		return -1;
 	}
 

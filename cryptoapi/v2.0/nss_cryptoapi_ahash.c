@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -201,7 +201,7 @@ int nss_cryptoapi_ahash_setkey(struct crypto_ahash *ahash, const u8 *key, unsign
 
 	status = nss_crypto_session_alloc(ctx->user, &data, &ctx->sid);
 	if (status < 0) {
-		nss_cfi_warn("%p: Unable to allocate crypto session(%d)\n", ctx, status);
+		nss_cfi_warn("%px: Unable to allocate crypto session(%d)\n", ctx, status);
 		crypto_ahash_set_flags(ahash, CRYPTO_TFM_RES_BAD_FLAGS);
 		return status;
 	}
@@ -300,7 +300,7 @@ int nss_cryptoapi_ahash_init(struct ahash_request *req)
 
 		status = nss_crypto_session_alloc(ctx->user, &data, &ctx->sid);
 		if (status < 0) {
-			nss_cfi_err("%p: Unable to allocate crypto session(%d)\n", ctx, status);
+			nss_cfi_err("%px: Unable to allocate crypto session(%d)\n", ctx, status);
 			crypto_ahash_set_flags(ahash, CRYPTO_TFM_RES_BAD_FLAGS);
 			return status;
 		}
@@ -439,7 +439,7 @@ int nss_cryptoapi_ahash_export(struct ahash_request *req, void *out)
 {
 	struct nss_cryptoapi_ctx *ctx __attribute__((unused)) = crypto_tfm_ctx(req->base.tfm);
 
-	nss_cfi_warn("%p: ahash .export is not supported", ctx);
+	nss_cfi_warn("%px: ahash .export is not supported", ctx);
 	return -ENOSYS;
 };
 
@@ -454,6 +454,6 @@ int nss_cryptoapi_ahash_import(struct ahash_request *req, const void *in)
 {
 	struct nss_cryptoapi_ctx *ctx __attribute__((unused)) = crypto_tfm_ctx(req->base.tfm);
 
-	nss_cfi_warn("%p: ahash .import is not supported", ctx);
+	nss_cfi_warn("%px: ahash .import is not supported", ctx);
 	return -ENOSYS;
 }

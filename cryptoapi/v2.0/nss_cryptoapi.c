@@ -2079,14 +2079,14 @@ void nss_cryptoapi_add_ctx2debugfs(struct nss_cryptoapi_ctx *ctx)
 	char buf[NSS_CRYPTOAPI_DEBUGFS_MAX_NAME] = {0};
 
 	if (!g_cryptoapi.root) {
-		nss_cfi_err("%p: DebugFS root directory missing(%p)\n", &g_cryptoapi, ctx);
+		nss_cfi_err("%px: DebugFS root directory missing(%px)\n", &g_cryptoapi, ctx);
 		return;
 	}
 
 	snprintf(buf, sizeof(buf), "ctx%d", ctx->sid);
 	ctx->dentry = debugfs_create_dir(buf, g_cryptoapi.root);
 	if (!ctx->dentry) {
-		nss_cfi_err("%p: Unable to create context debugfs entry", ctx);
+		nss_cfi_err("%px: Unable to create context debugfs entry", ctx);
 		return;
 	}
 
@@ -2107,7 +2107,7 @@ void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
 	struct nss_cryptoapi_algo_info *info;
 	int i;
 
-	nss_cfi_info("%p: Registering algorithms with Linux\n", sc);
+	nss_cfi_info("%px: Registering algorithms with Linux\n", sc);
 
 	BUG_ON(!user);
 
@@ -2129,7 +2129,7 @@ void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
 			continue;
 
 		if (crypto_register_alg(ablk)) {
-			nss_cfi_err("%p: ABLK registration failed(%s)\n", sc, ablk->cra_name);
+			nss_cfi_err("%px: ABLK registration failed(%s)\n", sc, ablk->cra_name);
 			ablk->cra_flags = 0;
 		}
 	}
@@ -2140,7 +2140,7 @@ void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
 			continue;
 
 		if (crypto_register_aead(aead)) {
-			nss_cfi_err("%p: AEAD registration failed(%s)\n", sc, aead->base.cra_name);
+			nss_cfi_err("%px: AEAD registration failed(%s)\n", sc, aead->base.cra_name);
 			aead->base.cra_flags = 0;
 		}
 	}
@@ -2151,7 +2151,7 @@ void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
 			continue;
 
 		if (crypto_register_ahash(ahash)) {
-			nss_cfi_err("%p: AHASH registration failed(%s)\n", sc, ahash->halg.base.cra_name);
+			nss_cfi_err("%px: AHASH registration failed(%s)\n", sc, ahash->halg.base.cra_name);
 			ahash->halg.base.cra_flags = 0;
 		}
 	}
@@ -2186,7 +2186,7 @@ void nss_cryptoapi_detach_user(void *app_data, struct nss_crypto_user *user)
 			continue;
 
 		crypto_unregister_alg(ablk);
-		nss_cfi_info("%p: ABLK unregister succeeded, algo: %s\n", sc, ablk->cra_name);
+		nss_cfi_info("%px: ABLK unregister succeeded, algo: %s\n", sc, ablk->cra_name);
 	}
 
 	for (i = 0; enable_aead && (i < ARRAY_SIZE(cryptoapi_aead_algs)); i++, aead++) {
@@ -2194,7 +2194,7 @@ void nss_cryptoapi_detach_user(void *app_data, struct nss_crypto_user *user)
 			continue;
 
 		crypto_unregister_aead(aead);
-		nss_cfi_info("%p: AEAD unregister succeeded, algo: %s\n", sc, aead->base.cra_name);
+		nss_cfi_info("%px: AEAD unregister succeeded, algo: %s\n", sc, aead->base.cra_name);
 	}
 
 	for (i = 0; enable_ahash && (i < ARRAY_SIZE(cryptoapi_ahash_algs)); i++, ahash++) {
@@ -2202,7 +2202,7 @@ void nss_cryptoapi_detach_user(void *app_data, struct nss_crypto_user *user)
 			continue;
 
 		crypto_unregister_ahash(ahash);
-		nss_cfi_info("%p: AHASH unregister succeeded, algo: %s\n", sc, ahash->halg.base.cra_name);
+		nss_cfi_info("%px: AHASH unregister succeeded, algo: %s\n", sc, ahash->halg.base.cra_name);
 	}
 }
 
@@ -2250,7 +2250,7 @@ int nss_cryptoapi_init(void)
 
 	g_cryptoapi.user = nss_crypto_register_user(&g_cryptoapi.ctx, &g_cryptoapi);
 	if (!g_cryptoapi.user) {
-		nss_cfi_err("%p: Failed to register nss_cryptoapi\n", &g_cryptoapi);
+		nss_cfi_err("%px: Failed to register nss_cryptoapi\n", &g_cryptoapi);
 		debugfs_remove_recursive(g_cryptoapi.root);
 		return -ENODEV;
 	}
