@@ -105,8 +105,6 @@ EXPORT_SYMBOL(nss_cryptoapi_skcipher_ctx2session);
 int nss_cryptoapi_ablkcipher_init(struct crypto_tfm *tfm)
 {
 	struct nss_cryptoapi_ctx *ctx = crypto_tfm_ctx(tfm);
-	struct crypto_ablkcipher *sw_tfm;
-	bool need_fallback;
 
 	BUG_ON(!ctx);
 	NSS_CRYPTOAPI_SET_MAGIC(ctx);
@@ -116,25 +114,6 @@ int nss_cryptoapi_ablkcipher_init(struct crypto_tfm *tfm)
 	ctx->user = g_cryptoapi.user;
 	ctx->stats.init++;
 	init_completion(&ctx->complete);
-
-	need_fallback = crypto_tfm_alg_flags(tfm) & CRYPTO_ALG_NEED_FALLBACK;
-	if (!need_fallback)
-		return 0;
-
-	/*
-	 * Alloc fallback transform for future use
-	 */
-	sw_tfm = crypto_alloc_ablkcipher(crypto_tfm_alg_name(tfm), 0, CRYPTO_ALG_ASYNC | CRYPTO_ALG_NEED_FALLBACK);
-	if (IS_ERR(sw_tfm)) {
-		nss_cfi_err("%px: unable to allocate SW_TFM(%s)\n", ctx, crypto_tfm_alg_name(tfm));
-		return -ENOMEM;
-	}
-
-	/*
-	 * set this tfm reqsize same to fallback tfm
-	 */
-	tfm->crt_ablkcipher.reqsize = crypto_ablkcipher_reqsize(sw_tfm);
-	ctx->sw_tfm = crypto_ablkcipher_tfm(sw_tfm);
 
 	return 0;
 }
@@ -150,11 +129,6 @@ void nss_cryptoapi_ablkcipher_exit(struct crypto_tfm *tfm)
 
 	BUG_ON(!ctx);
 	NSS_CRYPTOAPI_VERIFY_MAGIC(ctx);
-
-	if (ctx->sw_tfm) {
-		crypto_free_ablkcipher(__crypto_ablkcipher_cast(ctx->sw_tfm));
-		ctx->sw_tfm = NULL;
-	}
 
 	ctx->stats.exit++;
 
@@ -224,30 +198,6 @@ int nss_cryptoapi_ablk_setkey(struct crypto_ablkcipher *cipher, const u8 *key, u
 		memcpy(ctx->ctx_iv, key + keylen, CTR_RFC3686_NONCE_SIZE);
 		ctx->ctx_iv[3] = ntohl(0x1);
 		ctx->iv_size += CTR_RFC3686_NONCE_SIZE + sizeof(uint32_t);
-	}
-
-	/*
-	 * Fallback to software if an algorithm in not enabled in hardware.
-	 */
-	if (ctx->sw_tfm) {
-		ctx->fallback_req = true;
-
-		/*
-		 * set flag to fallback tfm
-		 */
-		crypto_tfm_clear_flags(ctx->sw_tfm, CRYPTO_TFM_REQ_MASK);
-		crypto_tfm_set_flags(ctx->sw_tfm, crypto_ablkcipher_get_flags(cipher) & CRYPTO_TFM_REQ_MASK);
-
-		/*
-		 * Set the key for fallback tfm
-		 */
-		status = crypto_ablkcipher_setkey(__crypto_ablkcipher_cast(ctx->sw_tfm), key, keylen);
-		if (status) {
-			nss_cfi_err("Failed to set key to the sw crypto");
-			crypto_ablkcipher_set_flags(cipher, crypto_tfm_get_flags(ctx->sw_tfm));
-		}
-
-		return status;
 	}
 
 	/*
@@ -322,34 +272,12 @@ int nss_cryptoapi_ablk_encrypt(struct ablkcipher_request *req)
 	struct crypto_tfm *tfm = req->base.tfm;
 	struct scatterlist *cur;
 	int tot_len = 0;
-	int error;
 	int i;
 
 	/*
 	 * Check cryptoapi context magic number.
 	 */
 	NSS_CRYPTOAPI_VERIFY_MAGIC(ctx);
-
-	if (ctx->fallback_req) {
-		struct crypto_ablkcipher *orig_tfm = crypto_ablkcipher_reqtfm(req);
-
-		/*
-		 * Set new fallback tfm to the request
-		 */
-		BUG_ON(!ctx->sw_tfm);
-		ablkcipher_request_set_tfm(req, __crypto_ablkcipher_cast(ctx->sw_tfm));
-		ctx->stats.queued++;
-
-		error = crypto_ablkcipher_encrypt(req);
-		if (!error)
-			ctx->stats.completed++;
-
-		/*
-		 * Set original tfm to the request
-		 */
-		ablkcipher_request_set_tfm(req, orig_tfm);
-		return error;
-	}
 
 	/*
 	 * Check if cryptoapi context is active or not
@@ -419,34 +347,12 @@ int nss_cryptoapi_ablk_decrypt(struct ablkcipher_request *req)
 	struct crypto_tfm *tfm = req->base.tfm;
 	struct scatterlist *cur;
 	int tot_len = 0;
-	int error;
 	int i;
 
 	/*
 	 * Check cryptoapi context magic number.
 	 */
 	NSS_CRYPTOAPI_VERIFY_MAGIC(ctx);
-
-	if (ctx->fallback_req) {
-		struct crypto_ablkcipher *orig_tfm = crypto_ablkcipher_reqtfm(req);
-
-		/*
-		 * Set new fallback tfm to the request
-		 */
-		BUG_ON(!ctx->sw_tfm);
-		ablkcipher_request_set_tfm(req, __crypto_ablkcipher_cast(ctx->sw_tfm));
-		ctx->stats.queued++;
-
-		error = crypto_ablkcipher_decrypt(req);
-		if (!error)
-			ctx->stats.completed++;
-
-		/*
-		 * Set original tfm to the request
-		 */
-		ablkcipher_request_set_tfm(req, orig_tfm);
-		return error;
-	}
 
 	/*
 	 * Check if cryptoapi context is active or not
