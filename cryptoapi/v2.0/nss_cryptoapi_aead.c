@@ -92,6 +92,7 @@ int nss_cryptoapi_aead_init(struct crypto_aead *aead)
 
 	ctx->user = g_cryptoapi.user;
 	ctx->stats.init++;
+	ctx->sid = NSS_CRYPTO_SESSION_MAX;
 	init_completion(&ctx->complete);
 
 	need_fallback = crypto_tfm_alg_flags(tfm) & CRYPTO_ALG_NEED_FALLBACK;
@@ -155,8 +156,6 @@ void nss_cryptoapi_aead_exit(struct crypto_aead *aead)
 	 */
 	atomic_set(&ctx->active, 0);
 
-	nss_crypto_session_free(ctx->user, ctx->sid);
-
 	if (!atomic_sub_and_test(1, &ctx->refcnt)) {
 		/*
 		 * We need to wait for any outstanding packet using this ctx.
@@ -167,7 +166,10 @@ void nss_cryptoapi_aead_exit(struct crypto_aead *aead)
 		WARN_ON(!ret);
 	}
 
-	ctx->sid = NSS_CRYPTO_SESSION_MAX;
+	if (ctx->sid != NSS_CRYPTO_SESSION_MAX) {
+		nss_crypto_session_free(ctx->user, ctx->sid);
+		ctx->sid = NSS_CRYPTO_SESSION_MAX;
+	}
 
 	debugfs_remove_recursive(ctx->dentry);
 	NSS_CRYPTOAPI_CLEAR_MAGIC(ctx);
@@ -200,6 +202,12 @@ int nss_cryptoapi_aead_setkey_noauth(struct crypto_aead *aead, const u8 *key, un
 
 	if (ctx->info->algo >= NSS_CRYPTO_CMN_ALGO_MAX)
 		return -ERANGE;
+
+	if (ctx->sid != NSS_CRYPTO_SESSION_MAX) {
+		nss_crypto_session_free(ctx->user, ctx->sid);
+		ctx->sid = NSS_CRYPTO_SESSION_MAX;
+		debugfs_remove_recursive(ctx->dentry);
+	}
 
 	nonce_sz = ctx->info->nonce;
 	ctx->iv_size = crypto_aead_ivsize(aead) + nonce_sz + sizeof(uint32_t);
@@ -313,6 +321,12 @@ int nss_cryptoapi_aead_setkey(struct crypto_aead *aead, const u8 *key, unsigned 
 	data.auth_key = keys.authkey;
 	data.auth_keylen = keys.authkeylen;
 	data.sec_key = false;
+
+	if (ctx->sid != NSS_CRYPTO_SESSION_MAX) {
+		nss_crypto_session_free(ctx->user, ctx->sid);
+		debugfs_remove_recursive(ctx->dentry);
+		ctx->sid = NSS_CRYPTO_SESSION_MAX;
+	}
 
 	status = nss_crypto_session_alloc(ctx->user, &data, &ctx->sid);
 	if (status < 0) {
