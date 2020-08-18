@@ -1772,6 +1772,64 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 };
 
 /*
+ * nss_cryptoapi_copy_reverse()
+ *	Reverse copy
+ *
+ * We need to copy the IV which is typically part of the last segment.
+ * However, we don't know whether the source is linear or split for the
+ * length of the IV. Hence, we copy in reverse direction and stop where
+ * the length ends. This way we can resume from the last location and
+ * continue till we the IV length worth of data is copied.
+ */
+static inline uint8_t *nss_cryptoapi_copy_reverse(uint8_t *dest, uint8_t *src, uint16_t len)
+{
+	/*
+	 * If, length is zero then it will simply return without copying anything
+	 */
+	while (len--) {
+		*(--dest) = *(--src);
+	}
+
+	return dest;
+}
+
+/*
+ * nss_cryptoapi_copy_iv()
+ *	Copy IV
+ */
+void nss_cryptoapi_copy_iv(struct nss_cryptoapi_ctx *ctx, struct scatterlist *sg, uint8_t *iv, uint8_t iv_len)
+{
+	struct scatterlist *last_sg;
+	uint8_t *iv_end = iv + iv_len;
+	int nsegs = sg_nents(sg);
+	uint8_t *sg_end;
+	int copy_len = 0;
+
+	/*
+	 * Invalid last SG
+	 */
+	last_sg = sg_last(sg, nsegs);
+	if (!last_sg) {
+		return;
+	}
+
+	/*
+	 * Walk the SG list in reverse direction
+	 */
+	for ( ; nsegs && iv_len; nsegs--, iv_len -= copy_len, last_sg--) {
+		if (sg_is_chain(last_sg)) {
+			last_sg = sg_chain_ptr(last_sg);
+		}
+
+		copy_len = last_sg->length >= iv_len ? iv_len : last_sg->length;
+		sg_end = sg_virt(last_sg) + last_sg->length;
+
+		nss_cfi_trace("%p: copy iv=%p, iv_len=%u, last_sg=%p", ctx, iv_end, iv_len, last_sg);
+		iv_end = nss_cryptoapi_copy_reverse(iv_end, sg_end, copy_len);
+	}
+}
+
+/*
  * nss_cryptoapi_ref_dec()
  *	Decrement cryptoapi context reference
  */
@@ -1947,6 +2005,14 @@ int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_
 
 	default:
 		break;
+	}
+
+	/*
+	 * For skcipher decryption case, the last block of encrypted data is used as
+	 * an IV for the next data
+	 */
+	if (ch->op == NSS_CRYPTO_OP_DIR_DEC) {
+		nss_cryptoapi_copy_iv(ctx, info->first_sg, info->iv, info->iv_size);
 	}
 
 skip_iv:

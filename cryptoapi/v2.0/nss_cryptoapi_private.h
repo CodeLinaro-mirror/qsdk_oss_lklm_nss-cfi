@@ -240,6 +240,7 @@ extern void nss_cryptoapi_ablkcipher_exit(struct crypto_tfm *tfm);
 extern int nss_cryptoapi_ablk_setkey(struct crypto_ablkcipher *cipher, const u8 *key, unsigned int len);
 extern int nss_cryptoapi_ablk_encrypt(struct ablkcipher_request *req);
 extern int nss_cryptoapi_ablk_decrypt(struct ablkcipher_request *req);
+extern void nss_cryptoapi_copy_iv(struct nss_cryptoapi_ctx *ctx, struct scatterlist *sg, uint8_t *iv, uint8_t iv_len);
 
 /*
  * AHASH

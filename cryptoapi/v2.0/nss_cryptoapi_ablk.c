@@ -240,6 +240,14 @@ void nss_cryptoapi_ablkcipher_done(void *app_data, struct nss_crypto_hdr *ch, ui
 	NSS_CRYPTOAPI_VERIFY_MAGIC(ctx);
 
 	/*
+	 * For skcipher decryption case, the last block of encrypted data is used as
+	 * an IV for the next data
+	 */
+	if (ch->op == NSS_CRYPTO_OP_DIR_ENC) {
+		nss_cryptoapi_copy_iv(ctx, req->dst, req->info, ch->iv_len);
+	}
+
+	/*
 	 * Free crypto hdr
 	 */
 	nss_crypto_hdr_free(ctx->user, ch);
