@@ -405,14 +405,20 @@ void nss_cryptoapi_aead_echainiv_tx_proc(struct nss_cryptoapi_ctx *ctx, struct a
 	memcpy(req->iv, sg_virt(req->src) + req->assoclen, crypto_aead_ivsize(aead));
 
 	info->iv = req->iv;
-	info->nsegs = sg_nents(req->src);
+	info->src.nsegs = sg_nents(req->src);
+	info->dst.nsegs = sg_nents(req->dst);
 	info->cb = nss_cryptoapi_aead_done;
 	info->iv_size = ctx->iv_size;
 	info->hmac_len = crypto_aead_authsize(aead);
 	info->ahash_skip = encrypt ? crypto_aead_authsize(aead) : 0;
-	info->first_sg = req->src;
-	info->last_sg = sg_last(req->src, info->nsegs);
+	info->src.first_sg = req->src;
+	info->src.last_sg = sg_last(req->src, info->src.nsegs);
+	info->dst.first_sg = req->dst;
+	info->dst.last_sg = sg_last(req->dst, info->dst.nsegs);
 	info->skip = req->assoclen + crypto_aead_ivsize(aead);
+	info->total_in_len = req->cryptlen + req->assoclen;
+	info->total_out_len = info->total_in_len + info->ahash_skip;
+	info->in_place = (req->src == req->dst) ? true : false;
 }
 
 /*
@@ -436,14 +442,20 @@ void nss_cryptoapi_aead_seqiv_tx_proc(struct nss_cryptoapi_ctx *ctx, struct aead
 	 * - 4 bytes of initial counter
 	 */
 	info->iv = req->iv;
-	info->nsegs = sg_nents(req->src);
+	info->src.nsegs = sg_nents(req->src);
+	info->dst.nsegs = sg_nents(req->dst);
 	info->cb = nss_cryptoapi_aead_done;
 	info->iv_size = ctx->iv_size;
 	info->hmac_len = crypto_aead_authsize(aead);
 	info->ahash_skip = encrypt ? crypto_aead_authsize(aead) : 0;
-	info->first_sg = req->src;
-	info->last_sg = sg_last(req->src, info->nsegs);
+	info->src.first_sg = req->src;
+	info->src.last_sg = sg_last(req->src, info->src.nsegs);
+	info->dst.first_sg = req->dst;
+	info->dst.last_sg = sg_last(req->dst, info->dst.nsegs);
 	info->skip = req->assoclen + crypto_aead_ivsize(aead);
+	info->total_in_len = req->cryptlen + req->assoclen;
+	info->total_out_len = info->total_in_len + info->ahash_skip;
+	info->in_place = (req->src == req->dst) ? true : false;
 
 	/*
 	 * For gcm RFC4106, IV is not part of authentication
@@ -462,14 +474,20 @@ void nss_cryptoapi_aead_tx_proc(struct nss_cryptoapi_ctx *ctx, struct aead_reque
 	struct crypto_aead *aead = crypto_aead_reqtfm(req);
 
 	info->iv = req->iv;
-	info->nsegs = sg_nents(req->src);
+	info->src.nsegs = sg_nents(req->src);
+	info->dst.nsegs = sg_nents(req->dst);
 	info->cb = nss_cryptoapi_aead_done;
 	info->iv_size = ctx->iv_size;
 	info->hmac_len = crypto_aead_authsize(aead);
 	info->ahash_skip = encrypt ? crypto_aead_authsize(aead) : 0;
-	info->first_sg = req->src;
-	info->last_sg = sg_last(req->src, info->nsegs);
+	info->src.first_sg = req->src;
+	info->src.last_sg = sg_last(req->src, info->src.nsegs);
+	info->dst.first_sg = req->dst;
+	info->dst.last_sg = sg_last(req->dst, info->dst.nsegs);
 	info->skip = req->assoclen;
+	info->total_in_len = req->cryptlen + req->assoclen;
+	info->total_out_len = info->total_in_len + info->ahash_skip;
+	info->in_place = (req->src == req->dst) ? true : false;
 
 	/*
 	 * This api is called from tcrypt, for GCM case assoclen include
@@ -518,7 +536,7 @@ int nss_cryptoapi_aead_encrypt(struct aead_request *req)
 	if (!atomic_read(&ctx->active))
 		return -EINVAL;
 
-	if (req->src != req->dst) {
+	if (sg_nents(req->src) != sg_nents(req->dst)) {
 		ctx->stats.failed_req++;
 		return -EINVAL;
 	}
@@ -569,7 +587,7 @@ int nss_cryptoapi_aead_decrypt(struct aead_request *req)
 	if (!atomic_read(&ctx->active))
 		return -EINVAL;
 
-	if (req->src != req->dst) {
+	if (sg_nents(req->src) != sg_nents(req->dst)) {
 		ctx->stats.failed_req++;
 		return -EINVAL;
 	}

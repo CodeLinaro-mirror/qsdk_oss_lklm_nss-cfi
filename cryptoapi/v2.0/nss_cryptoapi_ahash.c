@@ -370,11 +370,15 @@ int nss_cryptoapi_ahash_update(struct ahash_request *req)
 	/*
 	 * Fill the request information structure
 	 */
-	info.nsegs = sg_nents(req->src);
+	info.src.nsegs = sg_nents(req->src);
+	info.dst.nsegs = sg_nents(req->src);
 	info.cb = nss_cryptoapi_ahash_done;
 	info.hmac_len = crypto_ahash_digestsize(ahash);
-	info.first_sg = req->src;
-	info.last_sg = sg_last(req->src, info.nsegs);
+	info.src.first_sg = req->src;
+	info.src.last_sg = sg_last(req->src, info.src.nsegs);
+	info.dst.first_sg = req->src;
+	info.dst.last_sg = sg_last(req->src, info.src.nsegs);
+	info.in_place = true;
 	info.iv = NULL;
 	info.iv_size = 0;
 	info.skip = 0;
@@ -385,14 +389,14 @@ int nss_cryptoapi_ahash_update(struct ahash_request *req)
 	 * the DMA length to what is specified in req->nbytes and later
 	 * restore the length of scatterlist back to its original value.
 	 */
-	for_each_sg(req->src, cur, info.nsegs, i) {
+	for_each_sg(req->src, cur, info.src.nsegs, i) {
 		tot_len += cur->length;
 		if (!sg_next(cur))
 			break;
 	}
 
 	info.ahash_skip = tot_len - req->nbytes;
-	info.last_sg = cur;
+	info.src.last_sg = cur;
 
 	if (!atomic_inc_not_zero(&ctx->refcnt))
 		return -ENOENT;

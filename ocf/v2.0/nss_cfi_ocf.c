@@ -569,7 +569,7 @@ static int nss_cfi_ocf_process(device_t dev, struct cryptop *crp, int hint)
 	/*
 	 *  Allocate nss_crypto_buffer
 	 */
-	ch = nss_crypto_hdr_alloc(sc->crypto, sid, 1, ivsize, hash_len, false);
+	ch = nss_crypto_hdr_alloc(sc->crypto, sid, 1, 1, ivsize, hash_len, false);
 	if (!ch) {
 		nss_cfi_dbg("%px: not able to allocate crypto buffer\n");
 		goto crypto_done;

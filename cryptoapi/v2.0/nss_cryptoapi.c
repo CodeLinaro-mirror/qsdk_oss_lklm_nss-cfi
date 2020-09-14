@@ -1946,7 +1946,8 @@ int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_
 	/*
 	 * Allocate crypto hdr
 	 */
-	ch = nss_crypto_hdr_alloc(ctx->user, ctx->sid, info->nsegs, info->iv_size, info->hmac_len, ahash);
+	ch = nss_crypto_hdr_alloc(ctx->user, ctx->sid, info->src.nsegs, info->dst.nsegs, info->iv_size, info->hmac_len, ahash);
+
 	if (!ch) {
 		ctx->stats.failed_nomem++;
 		/*
@@ -1983,7 +1984,7 @@ int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_
 	 * mapping is done.
 	 */
 	if (unlikely(ahash)) {
-		nss_crypto_hdr_map_sglist_ahash(ch, info->first_sg, info->ahash_skip);
+		nss_crypto_hdr_map_sglist_ahash(ch, info->src.first_sg, info->ahash_skip);
 
 		/*
 		 * Skip IV since this is ahash
@@ -1991,7 +1992,7 @@ int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_
 		goto skip_iv;
 	}
 
-	nss_crypto_hdr_map_sglist(ch, info->first_sg, info->ahash_skip);
+	nss_crypto_hdr_map_sglist(ch, info->src.first_sg, info->dst.first_sg, (uint16_t)info->total_in_len, (uint16_t)info->total_out_len, info->in_place);
 
 	/*
 	 * Get IV location and memcpy the IV
@@ -2027,7 +2028,7 @@ int nss_cryptoapi_transform(struct nss_cryptoapi_ctx *ctx, struct nss_cryptoapi_
 	 * an IV for the next data
 	 */
 	if (ch->op == NSS_CRYPTO_OP_DIR_DEC) {
-		nss_cryptoapi_copy_iv(ctx, info->first_sg, info->iv, info->iv_size);
+		nss_cryptoapi_copy_iv(ctx, info->src.first_sg, info->iv, info->iv_size);
 	}
 
 skip_iv:

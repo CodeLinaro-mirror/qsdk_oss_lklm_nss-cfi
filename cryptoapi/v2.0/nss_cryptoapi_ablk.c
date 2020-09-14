@@ -301,7 +301,7 @@ int nss_cryptoapi_ablk_encrypt(struct ablkcipher_request *req)
 	if (!atomic_read(&ctx->active))
 		return -EINVAL;
 
-	if (req->src != req->dst) {
+	if (sg_nents(req->src) != sg_nents(req->dst)) {
 		ctx->stats.failed_req++;
 		return -EINVAL;
 	}
@@ -320,11 +320,18 @@ int nss_cryptoapi_ablk_encrypt(struct ablkcipher_request *req)
 	 * Fill the request information structure
 	 */
 	info.iv = req->info;
-	info.nsegs = sg_nents(req->src);
+	info.src.nsegs = sg_nents(req->src);
+	info.dst.nsegs = sg_nents(req->dst);
 	info.op_dir = NSS_CRYPTO_OP_DIR_ENC;
 	info.cb = nss_cryptoapi_ablkcipher_done;
 	info.iv_size = ctx->iv_size;
-	info.first_sg = req->src;
+	info.src.first_sg = req->src;
+	info.dst.first_sg = req->dst;
+	info.dst.last_sg = sg_last(req->dst, info.dst.nsegs);
+
+	/* out and in length will be same as ablk does only encrypt/decryt operation */
+	info.total_in_len = info.total_out_len = req->nbytes;
+	info.in_place = (req->src == req->dst) ? true : false;
 
 	/*
 	 * The exact length of data that needs to be ciphered for an ABLK
@@ -332,7 +339,7 @@ int nss_cryptoapi_ablk_encrypt(struct ablkcipher_request *req)
 	 * the DMA length to what is specified in req->nbytes and later
 	 * restore the length of scatterlist back to its original value.
 	 */
-	for_each_sg(req->src, cur, info.nsegs, i) {
+	for_each_sg(req->src, cur, info.src.nsegs, i) {
 		if (!cur)
 			break;
 
@@ -341,7 +348,7 @@ int nss_cryptoapi_ablk_encrypt(struct ablkcipher_request *req)
 			break;
 	}
 
-	info.last_sg = cur;
+	info.src.last_sg = cur;
 	info.ahash_skip = tot_len - req->nbytes;
 
 	if (!atomic_inc_not_zero(&ctx->refcnt))
@@ -375,7 +382,7 @@ int nss_cryptoapi_ablk_decrypt(struct ablkcipher_request *req)
 	if (!atomic_read(&ctx->active))
 		return -EINVAL;
 
-	if (req->src != req->dst) {
+	if (sg_nents(req->src) != sg_nents(req->dst)) {
 		ctx->stats.failed_req++;
 		return -EINVAL;
 	}
@@ -399,11 +406,18 @@ int nss_cryptoapi_ablk_decrypt(struct ablkcipher_request *req)
 	 * - 4 bytes of initial counter
 	 */
 	info.iv = req->info;
-	info.nsegs = sg_nents(req->src);
+	info.src.nsegs = sg_nents(req->src);
+	info.dst.nsegs = sg_nents(req->dst);
 	info.iv_size = ctx->iv_size;
 	info.op_dir = NSS_CRYPTO_OP_DIR_DEC;
 	info.cb = nss_cryptoapi_ablkcipher_done;
-	info.first_sg = req->src;
+	info.src.first_sg = req->src;
+	info.dst.first_sg = req->dst;
+	info.dst.last_sg = sg_last(req->dst, info.dst.nsegs);
+
+	/* out and in length will be same as ablk does only encrypt/decryt operation */
+	info.total_in_len = info.total_out_len = req->nbytes;
+	info.in_place = (req->src == req->dst) ? true : false;
 
 	/*
 	 * The exact length of data that needs to be ciphered for an ABLK
@@ -411,14 +425,14 @@ int nss_cryptoapi_ablk_decrypt(struct ablkcipher_request *req)
 	 * the DMA length to what is specified in req->nbytes and later
 	 * restore the length of scatterlist back to its original value.
 	 */
-	for_each_sg(req->src, cur, info.nsegs, i) {
+	for_each_sg(req->src, cur, info.src.nsegs, i) {
 		tot_len += cur->length;
 		if (!sg_next(cur))
 			break;
 	}
 
 	info.ahash_skip = tot_len - req->nbytes;
-	info.last_sg = cur;
+	info.src.last_sg = cur;
 
 	if (!atomic_inc_not_zero(&ctx->refcnt))
 		return -ENOENT;

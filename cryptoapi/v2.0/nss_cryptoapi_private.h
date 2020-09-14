@@ -129,13 +129,25 @@ struct nss_cryptoapi_ctx {
 };
 
 /*
+ * nss_cryptoapi_seg_info
+ *	Structure to store the information specific to the scatterlist
+ */
+struct nss_cryptoapi_seg_info {
+	struct scatterlist *first_sg;	/* First SG in the list */
+	struct scatterlist *last_sg;	/* Last SG in the list */
+	size_t nsegs;			/* Number of segments in the list */
+};
+
+/*
  * Request specific structure
  */
 struct nss_cryptoapi_info {
 	nss_crypto_req_callback_t cb;		/* Callback function */
-	struct scatterlist *first_sg;		/* First SG in the list */
-	struct scatterlist *last_sg;		/* Last SG in the list */
-	size_t nsegs;				/* No. of segments in the list */
+	struct nss_cryptoapi_seg_info src;	/* Segment information for src SG list */
+	struct nss_cryptoapi_seg_info dst;	/* Segment information for dst SG list */
+	bool in_place;				/* Set to TRUE if src and dst are same */
+	unsigned int total_in_len;		/* Total input length for the transformation */
+	unsigned int total_out_len;		/* Total output length of the transformation */
 	void *iv;				/* IV to use for transform */
 	uint8_t skip;				/* Cipher skip */
 	uint8_t auth;				/* auth len */
