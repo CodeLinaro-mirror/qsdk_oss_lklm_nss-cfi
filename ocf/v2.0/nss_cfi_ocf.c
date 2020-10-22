@@ -701,10 +701,25 @@ void nss_cfi_ocf_register(void *app_data, struct nss_crypto_user *user)
 	struct nss_cfi_ocf *sc = &g_cfi_ocf;
 
 	/* register algorithms with the framework */
-	crypto_register(sc->cid, CRYPTO_AES_CBC, 0, 0);
-	crypto_register(sc->cid, CRYPTO_3DES_CBC, 0, 0);
-	crypto_register(sc->cid, CRYPTO_SHA1_HMAC, 0, 0);
-	crypto_register(sc->cid, CRYPTO_MD5_HMAC, 0, 0);
+	if (nss_crypto_algo_is_supp(NSS_CRYPTO_CMN_ALGO_AES128_CBC)) {
+		crypto_register(sc->cid, CRYPTO_AES_CBC, 0, 0);
+		nss_cfi_info("%px: crypto_register for AES_CBC algo\n", sc);
+	}
+
+	if (nss_crypto_algo_is_supp(NSS_CRYPTO_CMN_ALGO_3DES_CBC)) {
+		crypto_register(sc->cid, CRYPTO_3DES_CBC, 0, 0);
+		nss_cfi_info("%px: crypto_register for 3DES_CBC algo\n", sc);
+	}
+
+	if (nss_crypto_algo_is_supp(NSS_CRYPTO_CMN_ALGO_SHA160_HMAC)) {
+		crypto_register(sc->cid, CRYPTO_SHA1_HMAC, 0, 0);
+		nss_cfi_info("%px: crypto_register for SHA1_HMAC algo\n", sc);
+	}
+
+	if (nss_crypto_algo_is_supp(NSS_CRYPTO_CMN_ALGO_MD5_HMAC)) {
+		crypto_register(sc->cid, CRYPTO_MD5_HMAC, 0, 0);
+		nss_cfi_info("%px: crypto_register for MD5_HMAC algo\n", sc);
+	}
 }
 
 /*
