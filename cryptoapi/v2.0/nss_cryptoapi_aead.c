@@ -168,10 +168,10 @@ void nss_cryptoapi_aead_exit(struct crypto_aead *aead)
 
 	if (ctx->sid != NSS_CRYPTO_SESSION_MAX) {
 		nss_crypto_session_free(ctx->user, ctx->sid);
+		debugfs_remove_recursive(ctx->dentry);
 		ctx->sid = NSS_CRYPTO_SESSION_MAX;
 	}
 
-	debugfs_remove_recursive(ctx->dentry);
 	NSS_CRYPTOAPI_CLEAR_MAGIC(ctx);
 }
 
