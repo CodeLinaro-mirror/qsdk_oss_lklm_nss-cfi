@@ -25,3 +25,9 @@ endif
 ifneq (, $(findstring ipq50xx, $(SoC)))
 ccflags-y += -DNSS_CFI_IPQ50XX_SUPPORT
 endif
+
+ifneq (, $(findstring ipq95xx, $(SoC)))
+ccflags-y += -DNSS_CFI_IPQ95XX_SUPPORT
+endif
+
+
