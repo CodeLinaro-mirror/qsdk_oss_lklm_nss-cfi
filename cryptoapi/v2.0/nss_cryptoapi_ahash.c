@@ -459,7 +459,7 @@ int nss_cryptoapi_ahash_export(struct ahash_request *req, void *out)
 {
 	struct nss_cryptoapi_ctx *ctx __attribute__((unused)) = crypto_tfm_ctx(req->base.tfm);
 
-	nss_cfi_warn("%px: ahash .export is not supported", ctx);
+	nss_cfi_info("%px: ahash .export is not supported", ctx);
 	return -ENOSYS;
 };
 
@@ -474,6 +474,6 @@ int nss_cryptoapi_ahash_import(struct ahash_request *req, const void *in)
 {
 	struct nss_cryptoapi_ctx *ctx __attribute__((unused)) = crypto_tfm_ctx(req->base.tfm);
 
-	nss_cfi_warn("%px: ahash .import is not supported", ctx);
+	nss_cfi_info("%px: ahash .import is not supported", ctx);
 	return -ENOSYS;
 }
