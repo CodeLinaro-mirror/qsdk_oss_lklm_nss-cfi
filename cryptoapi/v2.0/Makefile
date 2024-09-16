@@ -5,11 +5,15 @@ NSS_CRYPTOAPI_MOD_NAME=qca-nss-cfi-cryptoapi
 obj-m += $(NSS_CRYPTOAPI_MOD_NAME).o
 $(NSS_CRYPTOAPI_MOD_NAME)-objs = nss_cryptoapi.o
 $(NSS_CRYPTOAPI_MOD_NAME)-objs += nss_cryptoapi_aead.o
+
+ifneq (,$(filter $(cryptoapi_ablk), y))
 $(NSS_CRYPTOAPI_MOD_NAME)-objs += nss_cryptoapi_ablk.o
+ccflags-y += -DNSS_CRYPTOAPI_ABLK_SUPPORTED=1
+endif
+
 $(NSS_CRYPTOAPI_MOD_NAME)-objs += nss_cryptoapi_ahash.o
 
 obj ?= .
-
 ccflags-y += -I$(obj)/../../include
 ccflags-y += -I$(obj)/../exports
 ccflags-y += -I$(obj)/

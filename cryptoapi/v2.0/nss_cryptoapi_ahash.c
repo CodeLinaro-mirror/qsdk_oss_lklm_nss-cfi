@@ -38,7 +38,12 @@
 
 #include <crypto/aes.h>
 #include <crypto/des.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0))
 #include <crypto/sha.h>
+#else
+#include <crypto/sha1.h>
+#include <crypto/sha2.h>
+#endif
 #include <crypto/hash.h>
 #include <crypto/algapi.h>
 #include <crypto/aead.h>
@@ -187,7 +192,9 @@ int nss_cryptoapi_ahash_setkey(struct crypto_ahash *ahash, const u8 *key, unsign
 
 	ctx->info = nss_cryptoapi_cra_name2info(crypto_tfm_alg_name(tfm), 0, crypto_ahash_digestsize(ahash));
 	if (!ctx->info) {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0))
 		crypto_ahash_set_flags(ahash, CRYPTO_TFM_RES_BAD_KEY_LEN);
+#endif
 		return -EINVAL;
 	}
 
@@ -210,7 +217,9 @@ int nss_cryptoapi_ahash_setkey(struct crypto_ahash *ahash, const u8 *key, unsign
 	status = nss_crypto_session_alloc(ctx->user, &data, &ctx->sid);
 	if (status < 0) {
 		nss_cfi_warn("%px: Unable to allocate crypto session(%d)\n", ctx, status);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0))
 		crypto_ahash_set_flags(ahash, CRYPTO_TFM_RES_BAD_FLAGS);
+#endif
 		return status;
 	}
 
@@ -265,7 +274,11 @@ void nss_cryptoapi_ahash_done(void *app_data, struct nss_crypto_hdr *ch, uint8_t
 	 * Decrement cryptoapi reference
 	 */
 	nss_cryptoapi_ref_dec(ctx);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0))
 	req->base.complete(&req->base, error);
+#else
+	req->base.complete(req->base.data, error);
+#endif
 }
 
 /*
@@ -294,7 +307,9 @@ int nss_cryptoapi_ahash_init(struct ahash_request *req)
 		 */
 		ctx->info = nss_cryptoapi_cra_name2info(crypto_tfm_alg_name(tfm), 0, 0);
 		if (!ctx->info) {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0))
 			crypto_ahash_set_flags(ahash, CRYPTO_TFM_RES_BAD_KEY_LEN);
+#endif
 			return -EINVAL;
 		}
 
@@ -309,7 +324,9 @@ int nss_cryptoapi_ahash_init(struct ahash_request *req)
 		status = nss_crypto_session_alloc(ctx->user, &data, &ctx->sid);
 		if (status < 0) {
 			nss_cfi_err("%px: Unable to allocate crypto session(%d)\n", ctx, status);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0))
 			crypto_ahash_set_flags(ahash, CRYPTO_TFM_RES_BAD_FLAGS);
+#endif
 			return status;
 		}
 

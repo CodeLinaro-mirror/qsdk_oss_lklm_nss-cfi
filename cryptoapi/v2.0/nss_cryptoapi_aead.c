@@ -39,7 +39,12 @@
 
 #include <crypto/aes.h>
 #include <crypto/des.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0))
 #include <crypto/sha.h>
+#else
+#include <crypto/sha1.h>
+#include <crypto/sha2.h>
+#endif
 #include <crypto/hash.h>
 #include <crypto/algapi.h>
 #include <crypto/aead.h>
@@ -115,7 +120,6 @@ int nss_cryptoapi_aead_init(struct crypto_aead *aead)
 	 */
 	crypto_aead_set_reqsize(aead, crypto_aead_reqsize(sw_tfm));
 	ctx->sw_tfm = crypto_aead_tfm(sw_tfm);
-
 	return 0;
 }
 
@@ -197,7 +201,9 @@ int nss_cryptoapi_aead_setkey_noauth(struct crypto_aead *aead, const u8 *key, un
 	ctx->info = nss_cryptoapi_cra_name2info(crypto_tfm_alg_name(tfm), keylen, 0);
 	if (!ctx->info) {
 		nss_cfi_err("%px: Unable to find algorithm with keylen\n", ctx);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0))
 		crypto_aead_set_flags(aead, CRYPTO_TFM_RES_BAD_KEY_LEN);
+#endif
 		return -ENOENT;
 	}
 
@@ -229,7 +235,9 @@ int nss_cryptoapi_aead_setkey_noauth(struct crypto_aead *aead, const u8 *key, un
 	status = nss_crypto_session_alloc(ctx->user, &data, &ctx->sid);
 	if (status < 0) {
 		nss_cfi_err("%px: Unable to allocate crypto session(%d)\n", ctx, status);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0))
 		crypto_aead_set_flags(aead, CRYPTO_TFM_RES_BAD_FLAGS);
+#endif
 		return status;
 	}
 
@@ -261,14 +269,18 @@ int nss_cryptoapi_aead_setkey(struct crypto_aead *aead, const u8 *key, unsigned 
 	 */
 	if (crypto_authenc_extractkeys(&keys, key, keylen) != 0) {
 		nss_cfi_err("%px: Unable to extract keys\n", ctx);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0))
 		crypto_aead_set_flags(aead, CRYPTO_TFM_RES_BAD_KEY_LEN);
+#endif
 		return -EIO;
 	}
 
 	ctx->info = nss_cryptoapi_cra_name2info(crypto_tfm_alg_name(tfm), keys.enckeylen, crypto_aead_maxauthsize(aead));
 	if (!ctx->info) {
 		nss_cfi_err("%px: Unable to find algorithm with keylen\n", ctx);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0))
 		crypto_aead_set_flags(aead, CRYPTO_TFM_RES_BAD_KEY_LEN);
+#endif
 		return -ENOENT;
 	}
 
@@ -289,7 +301,9 @@ int nss_cryptoapi_aead_setkey(struct crypto_aead *aead, const u8 *key, unsigned 
 	 */
 	if (keys.authkeylen > ctx->info->auth_blocksize) {
 		nss_cfi_err("%px: Auth keylen(%d) exceeds supported\n", ctx, keys.authkeylen);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0))
 		crypto_aead_set_flags(aead, CRYPTO_TFM_RES_BAD_KEY_LEN);
+#endif
 		return -EINVAL;
 	}
 
@@ -311,7 +325,9 @@ int nss_cryptoapi_aead_setkey(struct crypto_aead *aead, const u8 *key, unsigned 
 		ret = crypto_aead_setkey(__crypto_aead_cast(ctx->sw_tfm), key, keylen);
 		if (ret) {
 			nss_cfi_err("Setkey failed for software fallback\n");
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0))
 			crypto_aead_set_flags(aead, crypto_tfm_get_flags(ctx->sw_tfm));
+#endif
 		}
 
 		return ret;
@@ -332,7 +348,9 @@ int nss_cryptoapi_aead_setkey(struct crypto_aead *aead, const u8 *key, unsigned 
 	status = nss_crypto_session_alloc(ctx->user, &data, &ctx->sid);
 	if (status < 0) {
 		nss_cfi_err("%px: Unable to allocate crypto session(%d)\n", ctx, status);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0))
 		crypto_aead_set_flags(aead, CRYPTO_TFM_RES_BAD_FLAGS);
+#endif
 		return status;
 	}
 
