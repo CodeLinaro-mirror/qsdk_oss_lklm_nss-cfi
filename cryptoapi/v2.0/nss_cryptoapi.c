@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -68,11 +68,9 @@ bool enable_aead = true;
 module_param(enable_aead, bool, S_IRUGO);
 MODULE_PARM_DESC(enable_aead, "Enable Cryptoapi AEAD support");
 
-#if defined(NSS_CRYPTOAPI_ABLK_SUPPORTED)
-bool enable_ablk = true;
-module_param(enable_ablk, bool, S_IRUGO);
-MODULE_PARM_DESC(enable_ablk, "Enable Cryptoapi ABLK support");
-#endif
+bool enable_skcipher = true;
+module_param(enable_skcipher, bool, S_IRUGO);
+MODULE_PARM_DESC(enable_skcipher, "Enable Cryptoapi SKCIPHER support");
 
 bool enable_ahash = true;
 module_param(enable_ahash, bool, S_IRUGO);
@@ -1368,112 +1366,103 @@ struct aead_alg cryptoapi_aead_algs[] = {
 };
 
 /*
- * ABLK cipher depricated in kernel 6.6
+ * SKCIPHER cipher algorithms
  */
-#if defined(NSS_CRYPTOAPI_ABLK_SUPPORTED)
-/*
- * ABLK cipher algorithms
- */
-static struct crypto_alg cryptoapi_ablkcipher_algs[] = {
+static struct skcipher_alg cryptoapi_skcipher_algs[] = {
 	{
-		.cra_name = "cbc(aes)",
-		.cra_driver_name = "nss-cbc-aes",
-		.cra_priority = 10000,
-		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
-		.cra_blocksize = AES_BLOCK_SIZE,
-		.cra_ctxsize = sizeof(struct nss_cryptoapi_ctx),
-		.cra_alignmask = 0,
-		.cra_type = &crypto_ablkcipher_type,
-		.cra_module = THIS_MODULE,
-		.cra_init = nss_cryptoapi_ablkcipher_init,
-		.cra_exit = nss_cryptoapi_ablkcipher_exit,
-		.cra_u = {
-			.ablkcipher = {
-				.ivsize = AES_BLOCK_SIZE,
-				.min_keysize = AES_MIN_KEY_SIZE,
-				.max_keysize = AES_MAX_KEY_SIZE,
-				.setkey = nss_cryptoapi_ablk_setkey,
-				.encrypt = nss_cryptoapi_ablk_encrypt,
-				.decrypt = nss_cryptoapi_ablk_decrypt,
-			},
+		.base = {
+			.cra_name		= "cbc(aes)",
+			.cra_driver_name	= "nss-cbc-aes",
+			.cra_priority 		= 10000,
+			.cra_flags 		= CRYPTO_ALG_ASYNC,
+			.cra_blocksize 		= AES_BLOCK_SIZE,
+			.cra_ctxsize		= sizeof(struct nss_cryptoapi_ctx),
+			.cra_alignmask 		= 0,
+			.cra_module		= THIS_MODULE,
 		},
+
+		.init		= nss_cryptoapi_skcipher_init,
+		.exit 		= nss_cryptoapi_skcipher_exit,
+		.ivsize 	= AES_BLOCK_SIZE,
+		.min_keysize 	= AES_MIN_KEY_SIZE,
+		.max_keysize 	= AES_MAX_KEY_SIZE,
+		.setkey 	= nss_cryptoapi_skcipher_setkey,
+		.encrypt 	= nss_cryptoapi_skcipher_encrypt,
+		.decrypt 	= nss_cryptoapi_skcipher_decrypt,
 	},
 	{
-		.cra_name       = "rfc3686(ctr(aes))",
-		.cra_driver_name = "nss-rfc3686-ctr-aes",
-		.cra_priority   = 30000,
-		.cra_flags      = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
-		.cra_blocksize  = AES_BLOCK_SIZE,
-		.cra_ctxsize    = sizeof(struct nss_cryptoapi_ctx),
-		.cra_alignmask  = 0,
-		.cra_type       = &crypto_ablkcipher_type,
-		.cra_module     = THIS_MODULE,
-		.cra_init       = nss_cryptoapi_ablkcipher_init,
-		.cra_exit       = nss_cryptoapi_ablkcipher_exit,
-		.cra_u          = {
-			.ablkcipher = {
-				.ivsize         = CTR_RFC3686_IV_SIZE,
-/*
- * geniv deprecated from kernel version 5.0 and above
- */
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0))
-				.geniv          = "seqiv",
-#endif
-				.min_keysize    = AES_MIN_KEY_SIZE + CTR_RFC3686_NONCE_SIZE,
-				.max_keysize    = AES_MAX_KEY_SIZE + CTR_RFC3686_NONCE_SIZE,
-				.setkey         = nss_cryptoapi_ablk_setkey,
-				.encrypt        = nss_cryptoapi_ablk_encrypt,
-				.decrypt        = nss_cryptoapi_ablk_decrypt,
-			},
+		/*
+		 * aes(ctr(rfc3686))
+		 */
+		.base = {
+			.cra_name		= "rfc3686(ctr(aes))",
+			.cra_driver_name 	= "nss-rfc3686-ctr-aes",
+			.cra_priority 		= 10000,
+			.cra_flags 		= CRYPTO_ALG_ASYNC,
+			.cra_blocksize 		= AES_BLOCK_SIZE,
+			.cra_ctxsize 		= sizeof(struct nss_cryptoapi_ctx),
+			.cra_alignmask 		= 0,
+			.cra_module 		= THIS_MODULE,
 		},
+
+		.init 		= nss_cryptoapi_skcipher_init,
+		.exit 		= nss_cryptoapi_skcipher_exit,
+		.ivsize 	= CTR_RFC3686_IV_SIZE,
+		.min_keysize 	= AES_MIN_KEY_SIZE + CTR_RFC3686_NONCE_SIZE,
+		.max_keysize 	= AES_MAX_KEY_SIZE + CTR_RFC3686_NONCE_SIZE,
+		.setkey 	= nss_cryptoapi_skcipher_setkey,
+		.encrypt 	= nss_cryptoapi_skcipher_encrypt,
+		.decrypt 	= nss_cryptoapi_skcipher_decrypt,
 	},
 	{
-		.cra_name = "ecb(aes)",
-		.cra_driver_name = "nss-ecb-aes",
-		.cra_priority = 10000,
-		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
-		.cra_blocksize = AES_BLOCK_SIZE,
-		.cra_ctxsize = sizeof(struct nss_cryptoapi_ctx),
-		.cra_alignmask = 0,
-		.cra_type = &crypto_ablkcipher_type,
-		.cra_module = THIS_MODULE,
-		.cra_init = nss_cryptoapi_ablkcipher_init,
-		.cra_exit = nss_cryptoapi_ablkcipher_exit,
-		.cra_u = {
-			.ablkcipher = {
-				.min_keysize = AES_MIN_KEY_SIZE,
-				.max_keysize = AES_MAX_KEY_SIZE,
-				.setkey = nss_cryptoapi_ablk_setkey,
-				.encrypt = nss_cryptoapi_ablk_encrypt,
-				.decrypt = nss_cryptoapi_ablk_decrypt,
-			},
+		/*
+		 * aes(ecb)
+		 */
+		.base = {
+			.cra_name		= "ecb(aes)",
+			.cra_driver_name 	= "nss-ecb-aes",
+			.cra_priority 		= 10000,
+			.cra_flags 		= CRYPTO_ALG_ASYNC,
+			.cra_blocksize 		= AES_BLOCK_SIZE,
+			.cra_ctxsize 		= sizeof(struct nss_cryptoapi_ctx),
+			.cra_alignmask 		= 0,
+			.cra_module 		= THIS_MODULE,
 		},
+
+		.init 		= nss_cryptoapi_skcipher_init,
+		.exit 		= nss_cryptoapi_skcipher_exit,
+		.ivsize 	= AES_BLOCK_SIZE,
+		.min_keysize 	= AES_MIN_KEY_SIZE,
+		.max_keysize 	= AES_MAX_KEY_SIZE,
+		.setkey 	= nss_cryptoapi_skcipher_setkey,
+		.encrypt 	= nss_cryptoapi_skcipher_encrypt,
+		.decrypt 	= nss_cryptoapi_skcipher_decrypt,
 	},
 	{
-		.cra_name = "cbc(des3_ede)",
-		.cra_driver_name = "nss-cbc-des-ede",
-		.cra_priority = 10000,
-		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
-		.cra_blocksize = DES3_EDE_BLOCK_SIZE,
-		.cra_ctxsize = sizeof(struct nss_cryptoapi_ctx),
-		.cra_alignmask = 0,
-		.cra_type = &crypto_ablkcipher_type,
-		.cra_module = THIS_MODULE,
-		.cra_init = nss_cryptoapi_ablkcipher_init,
-		.cra_exit = nss_cryptoapi_ablkcipher_exit,
-		.cra_u = {
-			.ablkcipher = {
-				.ivsize = DES3_EDE_BLOCK_SIZE,
-				.min_keysize = DES3_EDE_KEY_SIZE,
-				.max_keysize = DES3_EDE_KEY_SIZE,
-				.setkey = nss_cryptoapi_ablk_setkey,
-				.encrypt = nss_cryptoapi_ablk_encrypt,
-				.decrypt = nss_cryptoapi_ablk_decrypt,
-			},
+		/*
+		 * 3des(cbc)
+		 */
+		.base = {
+			.cra_name		= "cbc(des3_ede)",
+			.cra_driver_name 	= "nss-cbc-des-ede",
+			.cra_priority 		= 10000,
+			.cra_flags 		= CRYPTO_ALG_ASYNC,
+			.cra_blocksize 		= DES3_EDE_BLOCK_SIZE,
+			.cra_ctxsize 		= sizeof(struct nss_cryptoapi_ctx),
+			.cra_alignmask 		= 0,
+			.cra_module 		= THIS_MODULE,
 		},
+
+		.init 		= nss_cryptoapi_skcipher_init,
+		.exit 		= nss_cryptoapi_skcipher_exit,
+		.ivsize 	= DES3_EDE_BLOCK_SIZE,
+		.min_keysize 	= DES3_EDE_KEY_SIZE,
+		.max_keysize 	= DES3_EDE_KEY_SIZE,
+		.setkey 	= nss_cryptoapi_skcipher_setkey,
+		.encrypt 	= nss_cryptoapi_skcipher_encrypt,
+		.decrypt 	= nss_cryptoapi_skcipher_decrypt,
 	}
 };
-#endif
 
 /*
  * AHASH algorithms
@@ -2257,10 +2246,7 @@ void nss_cryptoapi_add_ctx2debugfs(struct nss_cryptoapi_ctx *ctx)
  */
 void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
 {
-
-#if defined(NSS_CRYPTOAPI_ABLK_SUPPORTED)
-	struct crypto_alg *ablk = cryptoapi_ablkcipher_algs;
-#endif
+	struct skcipher_alg *skcipher = cryptoapi_skcipher_algs;
 	struct aead_alg *aead = cryptoapi_aead_algs;
 	struct ahash_alg *ahash = cryptoapi_ahash_algs;
 	struct nss_cryptoapi *sc = app_data;
@@ -2283,18 +2269,17 @@ void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
 		      g_cryptoapi.user = user;
 	}
 
-#if defined(NSS_CRYPTOAPI_ABLK_SUPPORTED)
-	for (i = 0; enable_ablk && (i < ARRAY_SIZE(cryptoapi_ablkcipher_algs)); i++, ablk++) {
-		info = nss_cryptoapi_cra_name_lookup(ablk->cra_name);
+	for (i = 0; enable_skcipher && (i < ARRAY_SIZE(cryptoapi_skcipher_algs)); i++, skcipher++) {
+		info = nss_cryptoapi_cra_name_lookup(skcipher->base.cra_name);
 		if(!info || !nss_crypto_algo_is_supp(info->algo))
 			continue;
 
-		if (crypto_register_alg(ablk)) {
-			nss_cfi_err("%px: ABLK registration failed(%s)\n", sc, ablk->cra_name);
-			ablk->cra_flags = 0;
+		if (crypto_register_skcipher(skcipher)) {
+			nss_cfi_err("%px: SKCIPHER registration failed(%s)\n", sc, skcipher->base.cra_name);
+			aead->base.cra_flags = 0;
 		}
 	}
-#endif
+
 	for (i = 0; enable_aead && (i < ARRAY_SIZE(cryptoapi_aead_algs)); i++, aead++) {
 		info = nss_cryptoapi_cra_name_lookup(aead->base.cra_name);
 		if(!info || !nss_crypto_algo_is_supp(info->algo))
@@ -2320,11 +2305,7 @@ void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
 	/*
 	 * Set the registered flag
 	 */
-#if defined(NSS_CRYPTOAPI_ABLK_SUPPORTED)
-	atomic_set(&g_cryptoapi.registered, (enable_aead || enable_ablk || enable_ahash));
-#else
-	atomic_set(&g_cryptoapi.registered, (enable_aead || enable_ahash));
-#endif
+	atomic_set(&g_cryptoapi.registered, (enable_aead || enable_ahash || enable_skcipher));
 }
 
 /*
@@ -2333,9 +2314,7 @@ void nss_cryptoapi_attach_user(void *app_data, struct nss_crypto_user *user)
  */
 void nss_cryptoapi_detach_user(void *app_data, struct nss_crypto_user *user)
 {
-#if defined(NSS_CRYPTOAPI_ABLK_SUPPORTED)
-	struct crypto_alg *ablk = cryptoapi_ablkcipher_algs;
-#endif
+	struct skcipher_alg *skcipher = cryptoapi_skcipher_algs;
 	struct aead_alg *aead = cryptoapi_aead_algs;
 	struct ahash_alg *ahash = cryptoapi_ahash_algs;
 	struct nss_cryptoapi *sc = app_data;
@@ -2348,15 +2327,14 @@ void nss_cryptoapi_detach_user(void *app_data, struct nss_crypto_user *user)
 	 */
 	atomic_set(&g_cryptoapi.registered, 0);
 
-#if defined(NSS_CRYPTOAPI_ABLK_SUPPORTED)
-	for (i = 0; enable_ablk && (i < ARRAY_SIZE(cryptoapi_ablkcipher_algs)); i++, ablk++) {
-		if (!ablk->cra_flags)
+	for (i = 0; enable_skcipher && (i < ARRAY_SIZE(cryptoapi_skcipher_algs)); i++, skcipher++) {
+		if (!skcipher->base.cra_flags)
 			continue;
 
-		crypto_unregister_alg(ablk);
-		nss_cfi_info("%px: ABLK unregister succeeded, algo: %s\n", sc, ablk->cra_name);
+		crypto_unregister_skcipher(skcipher);
+		nss_cfi_info("%px: SKCIPHER unregister succeeded, algo: %s\n", sc, skcipher->base.cra_name);
 	}
-#endif
+
 	for (i = 0; enable_aead && (i < ARRAY_SIZE(cryptoapi_aead_algs)); i++, aead++) {
 		if (!aead->base.cra_flags)
 			continue;
