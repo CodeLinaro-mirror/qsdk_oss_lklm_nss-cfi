@@ -1,5 +1,5 @@
-/* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+/* Copyright (c) 2015-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -247,18 +247,15 @@ extern void nss_cryptoapi_aead_seqiv_tx_proc(struct nss_cryptoapi_ctx *ctx, stru
 extern void nss_cryptoapi_aead_tx_proc(struct nss_cryptoapi_ctx *ctx, struct aead_request *req,
 				struct nss_cryptoapi_info *info, bool encrypt);
 
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0))
 /*
- * ABLKCIPHER
+ * SKCIPHER
  */
-extern int nss_cryptoapi_ablkcipher_init(struct crypto_tfm *tfm);
-extern void nss_cryptoapi_ablkcipher_exit(struct crypto_tfm *tfm);
-extern int nss_cryptoapi_ablk_setkey(struct crypto_ablkcipher *cipher, const u8 *key, unsigned int len);
-extern int nss_cryptoapi_ablk_encrypt(struct ablkcipher_request *req);
-extern int nss_cryptoapi_ablk_decrypt(struct ablkcipher_request *req);
+extern int nss_cryptoapi_skcipher_init(struct crypto_skcipher *tfm);
+extern void nss_cryptoapi_skcipher_exit(struct crypto_skcipher *tfm);
+extern int nss_cryptoapi_skcipher_setkey(struct crypto_skcipher *cipher, const u8 *key, unsigned int len);
+extern int nss_cryptoapi_skcipher_encrypt(struct skcipher_request *req);
+extern int nss_cryptoapi_skcipher_decrypt(struct skcipher_request *req);
 extern void nss_cryptoapi_copy_iv(struct nss_cryptoapi_ctx *ctx, struct scatterlist *sg, uint8_t *iv, uint8_t iv_len);
-#endif
 
 /*
  * AHASH
