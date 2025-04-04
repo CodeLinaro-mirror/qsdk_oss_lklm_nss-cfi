@@ -1475,6 +1475,9 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 		.init   = nss_cryptoapi_ahash_init,
 		.update = nss_cryptoapi_ahash_update,
 		.final  = nss_cryptoapi_ahash_final,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+		.finup = nss_cryptoapi_ahash_finup,
+#endif
 		.export = nss_cryptoapi_ahash_export,
 		.import = nss_cryptoapi_ahash_import,
 		.digest = nss_cryptoapi_ahash_digest,
@@ -1503,6 +1506,9 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 		.init   = nss_cryptoapi_ahash_init,
 		.update = nss_cryptoapi_ahash_update,
 		.final  = nss_cryptoapi_ahash_final,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+		.finup = nss_cryptoapi_ahash_finup,
+#endif
 		.export = nss_cryptoapi_ahash_export,
 		.import = nss_cryptoapi_ahash_import,
 		.digest = nss_cryptoapi_ahash_digest,
@@ -1531,6 +1537,9 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 		.init   = nss_cryptoapi_ahash_init,
 		.update = nss_cryptoapi_ahash_update,
 		.final  = nss_cryptoapi_ahash_final,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+		.finup = nss_cryptoapi_ahash_finup,
+#endif
 		.export = nss_cryptoapi_ahash_export,
 		.import = nss_cryptoapi_ahash_import,
 		.digest = nss_cryptoapi_ahash_digest,
@@ -1559,6 +1568,9 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 		.init   = nss_cryptoapi_ahash_init,
 		.update = nss_cryptoapi_ahash_update,
 		.final  = nss_cryptoapi_ahash_final,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+		.finup = nss_cryptoapi_ahash_finup,
+#endif
 		.export = nss_cryptoapi_ahash_export,
 		.import = nss_cryptoapi_ahash_import,
 		.digest = nss_cryptoapi_ahash_digest,
@@ -1587,6 +1599,9 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 		.init   = nss_cryptoapi_ahash_init,
 		.update = nss_cryptoapi_ahash_update,
 		.final  = nss_cryptoapi_ahash_final,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+		.finup = nss_cryptoapi_ahash_finup,
+#endif
 		.export = nss_cryptoapi_ahash_export,
 		.import = nss_cryptoapi_ahash_import,
 		.digest = nss_cryptoapi_ahash_digest,
@@ -1615,6 +1630,9 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 		.init   = nss_cryptoapi_ahash_init,
 		.update = nss_cryptoapi_ahash_update,
 		.final  = nss_cryptoapi_ahash_final,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+		.finup = nss_cryptoapi_ahash_finup,
+#endif
 		.export = nss_cryptoapi_ahash_export,
 		.import = nss_cryptoapi_ahash_import,
 		.digest = nss_cryptoapi_ahash_digest,
@@ -1647,6 +1665,9 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 		.init   = nss_cryptoapi_ahash_init,
 		.update = nss_cryptoapi_ahash_update,
 		.final  = nss_cryptoapi_ahash_final,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+		.finup = nss_cryptoapi_ahash_finup,
+#endif
 		.export = nss_cryptoapi_ahash_export,
 		.import = nss_cryptoapi_ahash_import,
 		.digest = nss_cryptoapi_ahash_digest,
@@ -1675,6 +1696,9 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 		.init   = nss_cryptoapi_ahash_init,
 		.update = nss_cryptoapi_ahash_update,
 		.final  = nss_cryptoapi_ahash_final,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+		.finup = nss_cryptoapi_ahash_finup,
+#endif
 		.export = nss_cryptoapi_ahash_export,
 		.import = nss_cryptoapi_ahash_import,
 		.digest = nss_cryptoapi_ahash_digest,
@@ -1703,6 +1727,9 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 		.init   = nss_cryptoapi_ahash_init,
 		.update = nss_cryptoapi_ahash_update,
 		.final  = nss_cryptoapi_ahash_final,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+		.finup = nss_cryptoapi_ahash_finup,
+#endif
 		.export = nss_cryptoapi_ahash_export,
 		.import = nss_cryptoapi_ahash_import,
 		.digest = nss_cryptoapi_ahash_digest,
@@ -1731,6 +1758,9 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 		.init   = nss_cryptoapi_ahash_init,
 		.update = nss_cryptoapi_ahash_update,
 		.final  = nss_cryptoapi_ahash_final,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+		.finup = nss_cryptoapi_ahash_finup,
+#endif
 		.export = nss_cryptoapi_ahash_export,
 		.import = nss_cryptoapi_ahash_import,
 		.digest = nss_cryptoapi_ahash_digest,
@@ -1759,6 +1789,9 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 		.init   = nss_cryptoapi_ahash_init,
 		.update = nss_cryptoapi_ahash_update,
 		.final  = nss_cryptoapi_ahash_final,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+		.finup = nss_cryptoapi_ahash_finup,
+#endif
 		.export = nss_cryptoapi_ahash_export,
 		.import = nss_cryptoapi_ahash_import,
 		.digest = nss_cryptoapi_ahash_digest,
@@ -1787,6 +1820,9 @@ static struct ahash_alg cryptoapi_ahash_algs[] = {
 		.init   = nss_cryptoapi_ahash_init,
 		.update = nss_cryptoapi_ahash_update,
 		.final  = nss_cryptoapi_ahash_final,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+		.finup = nss_cryptoapi_ahash_finup,
+#endif
 		.export = nss_cryptoapi_ahash_export,
 		.import = nss_cryptoapi_ahash_import,
 		.digest = nss_cryptoapi_ahash_digest,
