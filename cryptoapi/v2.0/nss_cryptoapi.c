@@ -897,7 +897,7 @@ struct aead_alg cryptoapi_aead_algs[] = {
 		 */
 		.base = {
 			.cra_name = "echainiv(authenc(hmac(sha1),cbc(aes)))",
-			.cra_driver_name = "nss-hmac-sha1-cbc-aes",
+			.cra_driver_name = "nss-hmac-sha1-cbc-aes-ech",
 			.cra_priority = 10000,
 			.cra_flags = CRYPTO_ALG_ASYNC,
 			.cra_blocksize = AES_BLOCK_SIZE,
@@ -962,7 +962,7 @@ struct aead_alg cryptoapi_aead_algs[] = {
 		 */
 		.base = {
 			.cra_name = "echainiv(authenc(hmac(sha256),cbc(aes)))",
-			.cra_driver_name = "nss-hmac-sha256-cbc-aes",
+			.cra_driver_name = "nss-hmac-sha256-cbc-aes-ech",
 			.cra_priority = 10000,
 			.cra_flags = CRYPTO_ALG_ASYNC,
 			.cra_blocksize = AES_BLOCK_SIZE,
@@ -1071,7 +1071,7 @@ struct aead_alg cryptoapi_aead_algs[] = {
 		 */
 		.base = {
 			.cra_name = "echainiv(authenc(hmac(sha384),cbc(aes)))",
-			.cra_driver_name = "nss-hmac-sha384-cbc-aes",
+			.cra_driver_name = "nss-hmac-sha384-cbc-aes-ech",
 			.cra_priority = 10000,
 			.cra_flags = CRYPTO_ALG_ASYNC,
 			.cra_blocksize = AES_BLOCK_SIZE,
@@ -1094,7 +1094,7 @@ struct aead_alg cryptoapi_aead_algs[] = {
 		 */
 		.base = {
 			.cra_name = "echainiv(authenc(hmac(sha512),cbc(aes)))",
-			.cra_driver_name = "nss-hmac-sha512-cbc-aes",
+			.cra_driver_name = "nss-hmac-sha512-cbc-aes-ech",
 			.cra_priority = 10000,
 			.cra_flags = CRYPTO_ALG_ASYNC,
 			.cra_blocksize = AES_BLOCK_SIZE,
@@ -1117,7 +1117,7 @@ struct aead_alg cryptoapi_aead_algs[] = {
 		 */
 		.base = {
 			.cra_name = "echainiv(authenc(hmac(sha1),cbc(des3_ede)))",
-			.cra_driver_name = "nss-hmac-sha1-cbc-3des",
+			.cra_driver_name = "nss-hmac-sha1-cbc-3des-ech",
 			.cra_priority = 300,
 			.cra_flags = CRYPTO_ALG_ASYNC,
 			.cra_blocksize = DES3_EDE_BLOCK_SIZE,
@@ -1140,7 +1140,7 @@ struct aead_alg cryptoapi_aead_algs[] = {
 		 */
 		.base = {
 			.cra_name = "echainiv(authenc(hmac(sha256),cbc(des3_ede)))",
-			.cra_driver_name = "nss-hmac-sha256-cbc-3des",
+			.cra_driver_name = "nss-hmac-sha256-cbc-3des-ech",
 			.cra_priority = 300,
 			.cra_flags = CRYPTO_ALG_ASYNC,
 			.cra_blocksize = DES3_EDE_BLOCK_SIZE,
@@ -1322,7 +1322,7 @@ struct aead_alg cryptoapi_aead_algs[] = {
 		 */
 		.base = {
 			.cra_name = "seqiv(rfc4106(gcm(aes)))",
-			.cra_driver_name = "nss-rfc4106-gcm",
+			.cra_driver_name = "nss-rfc4106-gcm-seq",
 			.cra_priority = 10000,
 			.cra_flags = CRYPTO_ALG_ASYNC,
 			.cra_blocksize = AES_BLOCK_SIZE,
